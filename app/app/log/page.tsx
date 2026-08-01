@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { pad, dayKey } from "@/lib/dates";
+import { pad, dayKey, recentDays } from "@/lib/dates";
 import { getFoods, searchFoods, GROUP_LABELS, type FoodItem } from "@/lib/foods";
 import { itemTotals } from "@/lib/analysis";
 import { macroPresence, PRESENCE_THRESHOLD } from "@/lib/nutrition";
@@ -20,6 +20,8 @@ type Step = "time" | "type" | "food" | "feel";
 export default function LogMealPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("time");
+  const days = useMemo(() => recentDays(14), []);
+  const [entryDate, setEntryDate] = useState(() => dayKey(new Date()));
   const [time, setTime] = useState(() => {
     const n = new Date();
     return `${pad(n.getHours())}:${pad(n.getMinutes())}`;
@@ -73,7 +75,7 @@ export default function LogMealPage() {
     }
     const supabase = createClient();
     const { error: rpcError } = await supabase.rpc("log_entry", {
-      p_entry_date: dayKey(new Date()),
+      p_entry_date: entryDate,
       p_meal_type: type,
       p_mins: h * 60 + m,
       p_items: items.map((it) => ({ food_item_id: it.food.id, qty: it.qty })),
@@ -86,18 +88,51 @@ export default function LogMealPage() {
       setError("Couldn't save that meal. Nothing was lost — try again.");
       return;
     }
-    router.push("/app");
+    // Today's log is the wrong place to land after logging a past day — the
+    // entry would not be there. Send retrospective entries to History instead.
+    router.push(entryDate === dayKey(new Date()) ? "/app" : "/app/history");
     router.refresh();
   };
+
+  const isToday = entryDate === dayKey(new Date());
+  const whenLabel = isToday
+    ? time
+    : `${days.find((d) => d.key === entryDate)?.label ?? entryDate}, ${time}`;
 
   return (
     <section className="rn-card">
       {step === "time" && (
         <>
           <div className="rn-label">Step 1 of 4</div>
-          <h2 className="rn-q">What time are you logging this meal?</h2>
-          <p className="rn-note">Defaults to now. Change it if you&apos;re catching up on something you ate earlier.</p>
-          <input type="time" className="rn-input rn-time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <h2 className="rn-q">When was this?</h2>
+          <p className="rn-note">
+            Defaults to now. Change either field if you&apos;re catching up on something you ate
+            earlier — you can go back two weeks.
+          </p>
+
+          <label className="rn-label" htmlFor="entryDay">Day</label>
+          <select
+            id="entryDay"
+            className="rn-input"
+            value={entryDate}
+            onChange={(e) => setEntryDate(e.target.value)}
+          >
+            {days.map((d) => (
+              <option key={d.key} value={d.key}>{d.label}</option>
+            ))}
+          </select>
+
+          <label className="rn-label" htmlFor="entryTime">Time</label>
+          <input id="entryTime" type="time" className="rn-input rn-time" value={time}
+            onChange={(e) => setTime(e.target.value)} />
+
+          {entryDate !== dayKey(new Date()) && (
+            <p className="rn-fine">
+              Logging for <strong>{days.find((d) => d.key === entryDate)?.label}</strong>. It will
+              appear on that day in History and Summary, not on Today.
+            </p>
+          )}
+
           <div className="rn-row">
             <button className="rn-btn" onClick={() => setStep("type")}>Continue</button>
           </div>
@@ -106,7 +141,7 @@ export default function LogMealPage() {
 
       {step === "type" && (
         <>
-          <div className="rn-label">Step 2 of 4 · {time}</div>
+          <div className="rn-label">Step 2 of 4 · {whenLabel}</div>
           <h2 className="rn-q">Which eating occasion is this?</h2>
           <div className="rn-choices">
             {MEAL_TYPES.map((t) => (
@@ -121,7 +156,7 @@ export default function LogMealPage() {
 
       {step === "food" && (
         <>
-          <div className="rn-label">Step 3 of 4 · {type} at {time}</div>
+          <div className="rn-label">Step 3 of 4 · {type} at {whenLabel}</div>
           <h2 className="rn-q">What did you eat?</h2>
           <div className="rn-ac">
             <input
@@ -213,7 +248,7 @@ export default function LogMealPage() {
 
       {step === "feel" && (
         <>
-          <div className="rn-label">Step 4 of 4 · {type} at {time}</div>
+          <div className="rn-label">Step 4 of 4 · {type} at {whenLabel}</div>
           <h2 className="rn-q">How was this one?</h2>
           <p className="rn-note">
             All of this is optional — you can save now and skip it. It is here because what was

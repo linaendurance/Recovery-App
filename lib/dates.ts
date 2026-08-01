@@ -26,6 +26,33 @@ export function stableIndex(key: string) {
   return h;
 }
 
+/**
+ * The last `count` days, most recent first, for the log screen's day picker.
+ *
+ * Logging was previously locked to the current date, so anyone who forgot to
+ * log until Tuesday could not record Monday at all — despite step 1 inviting
+ * them to "catch up on something you ate earlier". The window is bounded
+ * because retrospective logging gets less accurate the further back it goes,
+ * and log_entry rejects future dates outright.
+ */
+export function recentDays(count: number, today = new Date()): { key: string; label: string }[] {
+  const out: { key: string; label: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    out.push({
+      key: dayKey(d),
+      label:
+        i === 0
+          ? "Today"
+          : i === 1
+          ? "Yesterday"
+          : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }),
+    });
+  }
+  return out;
+}
+
 // Whole days between two YYYY-MM-DD strings, compared at local noon so
 // daylight-saving shifts near midnight can't knock the count off by one.
 export function daysBetween(fromIso: string, toIso: string) {
