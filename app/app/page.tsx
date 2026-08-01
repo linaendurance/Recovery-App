@@ -4,12 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { pad, dayKey, fmtTime, fmtGap, minsNow, longDate } from "@/lib/dates";
-import { computeAnalysis, REFERENCE, type EntryRow } from "@/lib/analysis";
-import { todaysFact } from "@/lib/facts";
+import { computeAnalysis, LONG_GAP_MINS, type Analysis, type EntryRow } from "@/lib/analysis";
+import { todaysFact, responsiveFacts, sourceLabel } from "@/lib/facts";
+import { loadProfileContext } from "@/lib/profile";
+import { NUTRIENT_ORDER, referencesFor, type AgeBand } from "@/lib/nutrition";
+import { ENTRY_SELECT } from "@/lib/queries";
 
 export default function TodayPage() {
   const [now, setNow] = useState(new Date());
   const [entries, setEntries] = useState<EntryRow[] | null>(null);
+  const [band, setBand] = useState<AgeBand>("19plus");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,15 +27,21 @@ export default function TodayPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    const { data, error } = await supabase
-      .from("entries")
-      .select("id, meal_type, mins_since_midnight, entry_items(qty, food_items(*))")
-      .eq("user_id", user.id)
-      .eq("entry_date", dayKey(new Date()));
+
+    const [{ data, error }, ctx] = await Promise.all([
+      supabase
+        .from("entries")
+        .select(ENTRY_SELECT)
+        .eq("user_id", user.id)
+        .eq("entry_date", dayKey(new Date())),
+      loadProfileContext(),
+    ]);
+
     if (error) {
       setError("Couldn't load today's log. Refresh to try again.");
       return;
     }
+    setBand(ctx.band);
     setEntries((data ?? []) as unknown as EntryRow[]);
   }, []);
 
@@ -45,6 +55,8 @@ export default function TodayPage() {
   const nowMins = minsNow(now);
   const a = computeAnalysis(entries, nowMins, true);
   const fact = todaysFact(dayKey(now));
+  const responsive = responsiveFacts(a);
+  const references = referencesFor(band);
 
   return (
     <>
@@ -58,7 +70,8 @@ export default function TodayPage() {
 
       <section className="rn-card rn-fact">
         <div className="rn-label">Today&apos;s food fact</div>
-        <p className="rn-fact-text">{fact}</p>
+        <p className="rn-fact-text">{fact.text}</p>
+        {sourceLabel(fact) && <p className="rn-cite">{sourceLabel(fact)}</p>}
       </section>
 
       <Ribbon a={a} nowMins={nowMins} />
@@ -79,11 +92,19 @@ export default function TodayPage() {
           </p>
         ) : (
           <ul className="rn-list">
-            {a.entries.map((e) => (
+            {a.occasions.map(({ entry: e, presence }) => (
               <li key={e.id} className="rn-entry">
                 <span className="rn-mono rn-entry-time">{fmtTime(e.mins_since_midnight)}</span>
-                <div>
-                  <div className="rn-entry-type">{e.meal_type}</div>
+                <div style={{ flex: 1 }}>
+                  <div className="rn-entry-type">
+                    {e.meal_type}
+                    {e.felt_excessive && (
+                      <span className="rn-mark" title="You marked this as feeling excessive or out of control">
+                        ✳
+                      </span>
+                    )}
+                    {e.emotion && <span className="rn-emotion">{e.emotion}</span>}
+                  </div>
                   <div className="rn-entry-foods">
                     {e.entry_items.map((it, i) =>
                       it.food_items ? (
@@ -94,6 +115,11 @@ export default function TodayPage() {
                       ) : null
                     )}
                   </div>
+                  <div className="rn-macro-mini">
+                    <span className={presence.carbs ? "is-on" : ""}>C</span>
+                    <span className={presence.fat ? "is-on" : ""}>F</span>
+                    <span className={presence.protein ? "is-on" : ""}>P</span>
+                  </div>
                 </div>
               </li>
             ))}
@@ -101,16 +127,47 @@ export default function TodayPage() {
         )}
       </section>
 
+      {responsive.length > 0 && (
+        <section className="rn-card">
+          <div className="rn-label">Because of what you logged today</div>
+          <ul className="rn-obs">
+            {responsive.map((f) => (
+              <li key={f.id} className="rn-ob rn-ob--note">
+                <span className="rn-because">{f.because}</span>
+                {f.text}
+                {sourceLabel(f) && <span className="rn-cite-inline">{sourceLabel(f)}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="rn-card">
         <div className="rn-label">Nutrient adequacy</div>
         <p className="rn-note">
-          Reference <em>floors</em> for adult women — the level below which deficiency risk rises,
-          never a target to hit exactly and never a ceiling. Needs during recovery are often higher.
-          No calorie figures anywhere in this app, by design.
+          Reference <em>floors</em> for {band === "13-18" ? "females aged 14-18" : "adult women"} —
+          the level below which deficiency risk rises. Never a target to hit exactly, never a
+          ceiling. Needs during recovery are often higher. No calorie figures anywhere in this app,
+          by design. <Link className="rn-link" href="/app/sources">Where these come from</Link>
         </p>
         <div className="rn-bars">
-          {Object.entries(REFERENCE).map(([k, r]) => {
-            const v = a.totals[k as keyof typeof a.totals];
+          {NUTRIENT_ORDER.map((k) => {
+            const r = references[k];
+            const v = a.totals[k];
+            if (r.floor === null) {
+              return (
+                <div key={k} className="rn-bar-row">
+                  <div className="rn-bar-head">
+                    <span>{r.label}</span>
+                    <span className="rn-mono">
+                      {v >= 100 ? Math.round(v) : v.toFixed(1)} {r.unit}
+                      <em> / no published floor</em>
+                    </span>
+                  </div>
+                  <div className="rn-bar rn-bar--nofloor" />
+                </div>
+              );
+            }
             const p = Math.min(100, (v / r.floor) * 100);
             return (
               <div key={k} className="rn-bar-row">
@@ -121,7 +178,9 @@ export default function TodayPage() {
                     <em> / {r.floor} {r.unit} reference</em>
                   </span>
                 </div>
-                <div className="rn-bar"><div className={`rn-bar-fill ${p >= 100 ? "is-met" : ""}`} style={{ width: `${p}%` }} /></div>
+                <div className="rn-bar">
+                  <div className={`rn-bar-fill ${p >= 100 ? "is-met" : ""}`} style={{ width: `${p}%` }} />
+                </div>
               </div>
             );
           })}
@@ -131,13 +190,17 @@ export default function TodayPage() {
   );
 }
 
-function Ribbon({ a, nowMins }: { a: ReturnType<typeof computeAnalysis>; nowMins: number }) {
+function Ribbon({ a, nowMins }: { a: Analysis; nowMins: number }) {
   const START = 5 * 60, END = 24 * 60;
   const pct = (m: number) => Math.max(0, Math.min(100, ((m - START) / (END - START)) * 100));
   const times = a.entries.map((e) => e.mins_since_midnight);
   const gaps: [number, number][] = [];
-  for (let i = 1; i < times.length; i++) if (times[i] - times[i - 1] > 210) gaps.push([times[i - 1], times[i]]);
-  if (times.length && nowMins - times[times.length - 1] > 210) gaps.push([times[times.length - 1], nowMins]);
+  for (let i = 1; i < times.length; i++) {
+    if (times[i] - times[i - 1] > LONG_GAP_MINS) gaps.push([times[i - 1], times[i]]);
+  }
+  if (times.length && nowMins - times[times.length - 1] > LONG_GAP_MINS) {
+    gaps.push([times[times.length - 1], nowMins]);
+  }
 
   return (
     <section className="rn-card">
@@ -149,7 +212,12 @@ function Ribbon({ a, nowMins }: { a: ReturnType<typeof computeAnalysis>; nowMins
         ))}
         <div className="rn-nowline" style={{ left: `${pct(nowMins)}%` }} />
         {a.entries.map((e) => (
-          <div key={e.id} className="rn-bead" style={{ left: `${pct(e.mins_since_midnight)}%` }} title={`${e.meal_type} · ${fmtTime(e.mins_since_midnight)}`}>
+          <div
+            key={e.id}
+            className={`rn-bead ${e.felt_excessive ? "is-marked" : ""}`}
+            style={{ left: `${pct(e.mins_since_midnight)}%` }}
+            title={`${e.meal_type} · ${fmtTime(e.mins_since_midnight)}`}
+          >
             <span className="rn-bead-time rn-mono">{fmtTime(e.mins_since_midnight)}</span>
           </div>
         ))}

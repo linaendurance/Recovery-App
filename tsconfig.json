@@ -17,5 +17,8 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // supabase/functions runs on Deno, not Node: it resolves `jsr:` specifiers
+  // and has its own globals. Type-checking it with the Next.js config is a
+  // category error — it is checked by `deno check` / the Supabase CLI instead.
+  "exclude": ["node_modules", "supabase"]
 }

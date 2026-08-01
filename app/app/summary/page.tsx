@@ -3,12 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey, fmtTime, fmtGap, minsNow } from "@/lib/dates";
-import { computeAnalysis, observations, REFERENCE, type EntryRow } from "@/lib/analysis";
+import { computeAnalysis, observations, type EntryRow } from "@/lib/analysis";
 import { GROUP_LABELS, GROUP_ORDER } from "@/lib/foods";
-import { tonightsInsight } from "@/lib/facts";
+import { tonightsInsight, sourceLabel } from "@/lib/facts";
+import { loadProfileContext } from "@/lib/profile";
+import { NUTRIENT_ORDER, referencesFor, FUEL_RATIONALE, type AgeBand } from "@/lib/nutrition";
+import { ENTRY_SELECT } from "@/lib/queries";
 
 export default function SummaryPage() {
   const [entries, setEntries] = useState<EntryRow[] | null>(null);
+  const [band, setBand] = useState<AgeBand>("19plus");
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -18,15 +22,21 @@ export default function SummaryPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    const { data, error } = await supabase
-      .from("entries")
-      .select("id, meal_type, mins_since_midnight, entry_items(qty, food_items(*))")
-      .eq("user_id", user.id)
-      .eq("entry_date", dayKey(new Date()));
+
+    const [{ data, error }, ctx] = await Promise.all([
+      supabase
+        .from("entries")
+        .select(ENTRY_SELECT)
+        .eq("user_id", user.id)
+        .eq("entry_date", dayKey(new Date())),
+      loadProfileContext(),
+    ]);
+
     if (error) {
       setError("Couldn't load today's summary. Refresh to try again.");
       return;
     }
+    setBand(ctx.band);
     setEntries((data ?? []) as unknown as EntryRow[]);
   }, []);
 
@@ -37,7 +47,17 @@ export default function SummaryPage() {
   const deleteEntry = async (id: string) => {
     setDeletingId(id);
     const supabase = createClient();
-    const { error } = await supabase.from("entries").delete().eq("id", id);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setDeletingId(null);
+      return;
+    }
+    // Row Level Security already scopes this to the owner; the explicit
+    // user_id filter is defence in depth so a future RLS mistake cannot turn
+    // a delete-by-id into somebody else's data.
+    const { error } = await supabase.from("entries").delete().eq("id", id).eq("user_id", user.id);
     setDeletingId(null);
     if (error) {
       setError("Couldn't delete that entry. Try again.");
@@ -53,6 +73,7 @@ export default function SummaryPage() {
   const obs = observations(a);
   const repeated = [...a.names.entries()].filter(([, n]) => n > 1);
   const insight = tonightsInsight(dayKey(new Date()));
+  const references = referencesFor(band);
 
   return (
     <>
@@ -62,13 +83,16 @@ export default function SummaryPage() {
           {a.mealCount === 0 ? <p className="rn-empty">Nothing logged yet today.</p> : (
             <table className="rn-table">
               <tbody>
-                {Object.entries(REFERENCE).map(([k, r]) => {
-                  const v = a.totals[k as keyof typeof a.totals];
+                {NUTRIENT_ORDER.map((k) => {
+                  const r = references[k];
+                  const v = a.totals[k];
                   return (
                     <tr key={k}>
                       <td>{r.label}</td>
                       <td className="rn-mono">{v >= 100 ? Math.round(v) : v.toFixed(1)} {r.unit}</td>
-                      <td className="rn-fine">reference floor {r.floor} {r.unit}</td>
+                      <td className="rn-fine">
+                        {r.floor === null ? "no published floor" : `reference floor ${r.floor} ${r.unit}`}
+                      </td>
                     </tr>
                   );
                 })}
@@ -89,6 +113,43 @@ export default function SummaryPage() {
           )}
         </section>
       </div>
+
+      <section className="rn-card">
+        <div className="rn-label">Fuel consistency</div>
+        {a.mealCount === 0 ? (
+          <p className="rn-empty">Nothing logged yet.</p>
+        ) : (
+          <>
+            <p className="rn-note">
+              {a.completeFuelCount} of {a.mealCount} eating occasion
+              {a.mealCount === 1 ? "" : "s"} today carried carbohydrate, fat and protein together.
+            </p>
+            <ul className="rn-fuel-rows">
+              {a.occasions.map(({ entry, presence, totals }) => (
+                <li key={entry.id} className="rn-fuel-row">
+                  <span className="rn-mono rn-entry-time">{fmtTime(entry.mins_since_midnight)}</span>
+                  <span className="rn-fuel-name">
+                    {entry.meal_type}
+                    {entry.felt_excessive && <span className="rn-mark" title="Felt excessive or out of control">✳</span>}
+                  </span>
+                  <span className="rn-fuel-pills">
+                    <span className={`rn-fuel-pill ${presence.carbs ? "is-on" : ""}`}>
+                      C <em className="rn-mono">{totals.carbs.toFixed(0)}</em>
+                    </span>
+                    <span className={`rn-fuel-pill ${presence.fat ? "is-on" : ""}`}>
+                      F <em className="rn-mono">{totals.fat.toFixed(0)}</em>
+                    </span>
+                    <span className={`rn-fuel-pill ${presence.protein ? "is-on" : ""}`}>
+                      P <em className="rn-mono">{totals.protein.toFixed(0)}</em>
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="rn-fine">{FUEL_RATIONALE}</p>
+          </>
+        )}
+      </section>
 
       <div className="rn-summary-grid">
         <section className="rn-card">
@@ -131,12 +192,17 @@ export default function SummaryPage() {
               <li key={e.id} className="rn-entry">
                 <span className="rn-mono rn-entry-time">{fmtTime(e.mins_since_midnight)}</span>
                 <div style={{ flex: 1 }}>
-                  <div className="rn-entry-type">{e.meal_type}</div>
+                  <div className="rn-entry-type">
+                    {e.meal_type}
+                    {e.felt_excessive && <span className="rn-mark">✳</span>}
+                    {e.emotion && <span className="rn-emotion">{e.emotion}</span>}
+                  </div>
                   <div className="rn-entry-foods">
                     {e.entry_items.map((it, i) => it.food_items && (
                       <span key={i} className="rn-chip">{it.food_items.name}</span>
                     ))}
                   </div>
+                  {e.context_note && <p className="rn-context">{e.context_note}</p>}
                 </div>
                 <button className="rn-remove" onClick={() => deleteEntry(e.id)} disabled={deletingId === e.id} aria-label="Delete entry">
                   {deletingId === e.id ? "…" : "×"}
@@ -150,7 +216,8 @@ export default function SummaryPage() {
 
       <section className="rn-card rn-insight">
         <div className="rn-label">Tonight&apos;s recovery insight</div>
-        <p>{insight}</p>
+        <p>{insight.text}</p>
+        {sourceLabel(insight) && <p className="rn-cite">{sourceLabel(insight)}</p>}
       </section>
     </>
   );

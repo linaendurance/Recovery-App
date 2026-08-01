@@ -17,7 +17,10 @@ export default function DataPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setBusy(false); // otherwise the button stays stuck in its busy state forever
+      return;
+    }
 
     const [{ data: entries }, { data: journals }] = await Promise.all([
       supabase.from("entries").select("entry_date").eq("user_id", user.id),
@@ -45,12 +48,17 @@ export default function DataPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setBusy(false); // otherwise the button stays stuck in its busy state forever
+      return;
+    }
 
     const [{ data: entries }, { data: journals }] = await Promise.all([
       supabase
         .from("entries")
-        .select("entry_date, meal_type, mins_since_midnight, logged_at, entry_items(qty, food_items(name, food_group, portion, unit))")
+        .select(
+          "entry_date, meal_type, mins_since_midnight, logged_at, felt_excessive, emotion, context_note, entry_items(qty, food_items(name, food_group, portion, unit, carbs, fat, protein, fibre, iron, calcium))"
+        )
         .eq("user_id", user.id),
       supabase.from("journal_entries").select("entry_date, format, answers, saved_at").eq("user_id", user.id),
     ]);
@@ -71,7 +79,10 @@ export default function DataPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setBusy(false);
+      return;
+    }
 
     // journal_entries and entry_items aren't deleted explicitly — entries
     // cascades to entry_items at the database level, and journal_entries
@@ -94,10 +105,13 @@ export default function DataPage() {
         <p className="rn-note">
           Everything you log is stored under your own account in this app&apos;s private database.
           Row-level security means no other person using this app — including the friend who
-          invited you — can ever query your entries or journal answers. The one exception is the
-          Coach tab (coming next): sending it a message sends that message, plus a short factual
-          summary of today&apos;s log, to Anthropic&apos;s API. Your journal answers are never
-          included in that call.
+          invited you — can ever query your entries or journal answers.
+        </p>
+        <p className="rn-note">
+          Nothing you write leaves that database today. No third party receives your food log or
+          your journal, and no analytics run on this app. If a Coach feature is ever added, it
+          would send messages to a model provider — that is not built, not switched on, and this
+          text will say so plainly on the day it changes.
         </p>
       </section>
 

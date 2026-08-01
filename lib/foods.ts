@@ -9,6 +9,10 @@ export type FoodItem = {
   portion: number;
   unit: "g" | "ml";
   protein: number;
+  /** Available carbohydrate per 100 g/ml — excludes fibre, which is counted separately. */
+  carbs: number;
+  /** Total fat per 100 g/ml. */
+  fat: number;
   fibre: number;
   iron: number;
   calcium: number;

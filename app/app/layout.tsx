@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SignOutButton from "@/components/SignOutButton";
 import Nav from "@/components/Nav";
+import SafetyFooter from "@/components/SafetyFooter";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
       <Nav />
       {children}
+      <SafetyFooter />
     </main>
   );
 }

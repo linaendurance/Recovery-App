@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export default function SignupPage() {
           password,
           invite_code: inviteCode.trim(),
           display_name: displayName.trim(),
+          birth_year: birthYear.trim(),
         }),
       });
       const data = await res.json();
@@ -69,6 +71,15 @@ export default function SignupPage() {
           <label className="rn-label" htmlFor="displayName">Your name</label>
           <input id="displayName" required autoComplete="name" className="rn-input"
             value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+
+          <label className="rn-label" htmlFor="birthYear">Year of birth</label>
+          <input id="birthYear" required inputMode="numeric" pattern="[0-9]{4}" placeholder="e.g. 1998"
+            className="rn-input rn-mono" value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))} />
+          <p className="rn-hint">
+            Only used to show the right nutrient reference values — they differ before and after
+            about age 19. Not shown to anyone, and the year alone is stored, never a full date.
+          </p>
 
           <label className="rn-label" htmlFor="email">Email</label>
           <input id="email" type="email" required autoComplete="email" className="rn-input"
