@@ -5,11 +5,15 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Salt for hashing caller IPs. Set IP_HASH_SALT in the function's secrets in
-// production; the fallback keeps local development working. Raw IPs are never
-// stored — only a salted hash, so the attempt log cannot be turned back into a
-// list of who tried to sign up.
-const IP_SALT = Deno.env.get("IP_HASH_SALT") ?? "recovery-tracker-dev-salt";
+// Salt for hashing caller IPs. Raw IPs are never stored — only a salted hash,
+// so the attempt log cannot be reversed into a list of who tried to sign up.
+//
+// The fallback used to be a fixed string committed to the repository, which
+// made the hashes trivially reversible by anyone who read the source. It now
+// falls back to the service role key: high-entropy, secret, stable, and never
+// leaves this runtime. Setting IP_HASH_SALT explicitly is still preferable so
+// that rotating the service key does not reset rate-limit history.
+const IP_SALT = Deno.env.get("IP_HASH_SALT") ?? SERVICE_ROLE_KEY;
 
 // verify_jwt is off (it has to be — sign-up happens before there is a session),
 // so this endpoint is reachable by anyone. Previously it also sent
@@ -64,12 +68,50 @@ function json(body: unknown, status: number, origin: string | null) {
   });
 }
 
-async function hashIp(ip: string): Promise<string> {
-  const data = new TextEncoder().encode(`${IP_SALT}:${ip}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
+async function sha(algorithm: "SHA-1" | "SHA-256", value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(algorithm, new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+async function hashIp(ip: string): Promise<string> {
+  return await sha("SHA-256", `${IP_SALT}:${ip}`);
+}
+
+/**
+ * Checks a password against the Have I Been Pwned breach corpus.
+ *
+ * Supabase Auth has this built in but it is disabled on this project and can
+ * only be turned on from the dashboard, so it is implemented here instead.
+ *
+ * Uses k-anonymity: only the FIRST FIVE characters of the SHA-1 hash are sent.
+ * The password itself, and the full hash, never leave this function. The
+ * Add-Padding header makes every response a uniform size so the number of
+ * returned matches cannot be inferred from traffic size.
+ *
+ * Returns null when the service cannot be reached — the caller fails OPEN, so
+ * an HIBP outage degrades password screening rather than blocking all sign-ups.
+ */
+async function timesPwned(password: string): Promise<number | null> {
+  try {
+    const hash = (await sha("SHA-1", password)).toUpperCase();
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: { "Add-Padding": "true" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    const body = await res.text();
+    for (const line of body.split("\n")) {
+      const [suf, count] = line.trim().split(":");
+      if (suf === suffix) return Number(count) || 0;
+    }
+    return 0;
+  } catch {
+    return null;
+  }
 }
 
 // One message for every "we will not create this account" outcome. Saying
@@ -137,6 +179,20 @@ Deno.serve(async (req) => {
   }
   if (password.length < 8 || password.length > 72) {
     return json({ error: "Password must be between 8 and 72 characters." }, 400, origin);
+  }
+
+  // Breach screening. Runs before the invite code is checked so a weak password
+  // never consumes a single-use code.
+  const pwned = await timesPwned(password);
+  if (pwned !== null && pwned > 0) {
+    return json(
+      {
+        error:
+          "That password has appeared in a known data breach, so it is not safe to use here. Please choose a different one.",
+      },
+      400,
+      origin,
+    );
   }
 
   // Age gate. Reference nutrient values differ sharply for under-18s, and the
