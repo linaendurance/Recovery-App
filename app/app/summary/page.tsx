@@ -29,7 +29,7 @@ export default function SummaryPage() {
         .select(ENTRY_SELECT)
         .eq("user_id", user.id)
         .eq("entry_date", dayKey(new Date())),
-      loadProfileContext(),
+      loadProfileContext(user.id),
     ]);
 
     if (error) {

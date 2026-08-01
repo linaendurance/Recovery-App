@@ -20,17 +20,26 @@ export type ProfileContext = {
  * — they are the lower of the two for calcium, so an adolescent seeing them
  * would be under-informed rather than misled upward.
  */
-export async function loadProfileContext(): Promise<ProfileContext> {
+export async function loadProfileContext(knownUserId?: string): Promise<ProfileContext> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { profile: null, band: "19plus", references: referencesFor("19plus") };
+
+  // Every auth.getUser() is a network round-trip that re-validates the JWT
+  // against Supabase Auth. Callers that already resolved the user pass the id
+  // in rather than paying for a second validation of the same token — loading
+  // Today used to cost four (middleware, layout, page, and this).
+  let userId = knownUserId;
+  if (!userId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id;
+  }
+  if (!userId) return { profile: null, band: "19plus", references: referencesFor("19plus") };
 
   const { data } = await supabase
     .from("profiles")
     .select("id, display_name, birth_year, created_at")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   const profile = (data as Profile) ?? null;

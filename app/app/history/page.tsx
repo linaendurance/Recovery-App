@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { fmtTime, fmtGap, longDate } from "@/lib/dates";
+import { fmtTime, fmtGap, longDate, dayKey } from "@/lib/dates";
 import { computeDayShapes, LONG_GAP_MINS, type DayShape, type EntryRow } from "@/lib/analysis";
 import { answeredPairs, type StoredAnswers } from "@/lib/journalBank";
 import { ENTRY_SELECT } from "@/lib/queries";
@@ -16,8 +16,27 @@ type JournalRow = {
 
 type Tab = "timing" | "journal";
 
+// This screen previously fetched EVERY entry the account had ever written, and
+// every entry_item carries a full food_items row. Measured on the demo
+// account that is ~50 kB for 14 days — about 1.3 MB after a year and ~4 MB
+// after three, re-downloaded on every visit. Windowing it keeps the common
+// case small; "all time" is still available, just not the default.
+const WINDOWS = [
+  { days: 90, label: "Last 90 days" },
+  { days: 365, label: "Last year" },
+  { days: 0, label: "All time" },
+];
+
+function windowStart(days: number): string | null {
+  if (days === 0) return null;
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return dayKey(d);
+}
+
 export default function HistoryPage() {
   const [tab, setTab] = useState<Tab>("timing");
+  const [windowDays, setWindowDays] = useState(90);
   const [shapes, setShapes] = useState<DayShape[] | null>(null);
   const [journals, setJournals] = useState<JournalRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,15 +48,21 @@ export default function HistoryPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
+    const from = windowStart(windowDays);
+    let entryQuery = supabase.from("entries").select(ENTRY_SELECT).eq("user_id", user.id);
+    let journalQuery = supabase
+      .from("journal_entries")
+      .select("entry_date, format, answers, saved_at")
+      .eq("user_id", user.id)
+      .order("entry_date", { ascending: false });
+
+    if (from) {
+      entryQuery = entryQuery.gte("entry_date", from);
+      journalQuery = journalQuery.gte("entry_date", from);
+    }
+
     const [{ data: entries, error: entryError }, { data: journalRows, error: journalError }] =
-      await Promise.all([
-        supabase.from("entries").select(ENTRY_SELECT).eq("user_id", user.id),
-        supabase
-          .from("journal_entries")
-          .select("entry_date, format, answers, saved_at")
-          .eq("user_id", user.id)
-          .order("entry_date", { ascending: false }),
-      ]);
+      await Promise.all([entryQuery, journalQuery]);
 
     if (entryError || journalError) {
       setError("Couldn't load your history. Refresh to try again.");
@@ -45,9 +70,11 @@ export default function HistoryPage() {
     }
     setShapes(computeDayShapes((entries ?? []) as unknown as EntryRow[]));
     setJournals((journalRows ?? []) as JournalRow[]);
-  }, []);
+  }, [windowDays]);
 
   useEffect(() => {
+    setShapes(null);
+    setJournals(null);
     load();
   }, [load]);
 
@@ -65,6 +92,18 @@ export default function HistoryPage() {
         <button className={`rn-choice ${tab === "journal" ? "is-on" : ""}`} onClick={() => setTab("journal")}>
           Past reflections
         </button>
+      </div>
+
+      <div className="rn-subtabs">
+        {WINDOWS.map((w) => (
+          <button
+            key={w.days}
+            className={`rn-choice ${windowDays === w.days ? "is-on" : ""}`}
+            onClick={() => setWindowDays(w.days)}
+          >
+            {w.label}
+          </button>
+        ))}
       </div>
 
       {tab === "timing" ? <TimingHistory shapes={shapes} /> : <JournalHistory rows={journals} />}
