@@ -9,8 +9,11 @@ export const fmtTime = (mins: number) =>
   `${pad(Math.floor(mins / 60) % 24)}:${pad(Math.round(mins) % 60)}`;
 
 export const fmtGap = (mins: number) => {
-  const h = Math.floor(mins / 60);
-  const m = Math.round(mins % 60);
+  // Clamped because a duration is never negative to a reader. Without this a
+  // meal logged for later today rendered as "-9 h 00 min" in the ribbon legend.
+  const total = Math.max(0, mins);
+  const h = Math.floor(total / 60);
+  const m = Math.round(total % 60);
   return h ? `${h} h ${pad(m)} min` : `${m} min`;
 };
 

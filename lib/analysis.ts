@@ -105,7 +105,11 @@ export function computeAnalysis(entries: EntryRow[], nowMins: number, isToday: b
   for (let i = 1; i < times.length; i++) {
     if (times[i] - times[i - 1] > longestGap) longestGap = times[i] - times[i - 1];
   }
-  const sinceLast = times.length && isToday ? nowMins - times[times.length - 1] : 0;
+  // Nothing stops someone logging a meal for later today — only future DATES
+  // are rejected. When they do, `now - lastMeal` goes negative, which read as
+  // a nonsense "time since you last ate" and a negative gap in the legend.
+  const sinceLast =
+    times.length && isToday ? Math.max(0, nowMins - times[times.length - 1]) : 0;
   const openGapFlag = isToday && times.length > 0 && sinceLast > LONG_GAP_MINS;
 
   return {
