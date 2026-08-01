@@ -1,0 +1,13 @@
+# Netlify picks up the Next.js runtime automatically, but pinning the build
+# command and Node version keeps the deploy reproducible rather than dependent
+# on whatever the build image defaults to that week.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Security headers are set in next.config.mjs and served by the Next runtime.
+# They are NOT duplicated here: two sources for the same header is how a CSP
+# silently ends up weaker than the one you think you wrote.

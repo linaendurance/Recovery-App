@@ -20,19 +20,24 @@ const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+// The one deployed front end. Kept as an explicit exact-match default so the
+// function is not wide open to every *.netlify.app site on the internet while
+// ALLOWED_ORIGINS is still unset.
+const DEFAULT_ALLOWED = [
+  "https://recovery-nutrition-tracker.netlify.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.length > 0) return ALLOWED_ORIGINS.includes(origin);
-  // Default posture until ALLOWED_ORIGINS is configured: local dev and Vercel
-  // preview/production hosts only — not the whole internet.
+  if (DEFAULT_ALLOWED.includes(origin)) return true;
+  // Netlify deploy previews get a per-deploy subdomain, so they cannot be
+  // listed exactly. Allow only previews OF THIS SITE.
   try {
     const { hostname, protocol } = new URL(origin);
-    if (protocol !== "https:" && hostname !== "localhost" && hostname !== "127.0.0.1") return false;
-    return (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname.endsWith(".vercel.app")
-    );
+    return protocol === "https:" && hostname.endsWith("--recovery-nutrition-tracker.netlify.app");
   } catch {
     return false;
   }
