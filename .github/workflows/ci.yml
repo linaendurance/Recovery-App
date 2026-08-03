@@ -29,6 +29,11 @@ jobs:
         run: npm test
 
       - name: Production build
+        # Public by design (see README "Configuration"), but they must be
+        # present or the build fails by design.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
       # Every JSON file must parse strictly. tsconfig.json previously contained
@@ -48,3 +53,10 @@ jobs:
           dupes=$(ls supabase/migrations | cut -d_ -f1 | sort | uniq -d)
           if [ -n "$dupes" ]; then echo "duplicate migration versions: $dupes"; exit 1; fi
           echo "migration versions unique: $(ls supabase/migrations | wc -l) files"
+
+      # The restore path, proven rather than assumed: apply every migration to
+      # an empty database and diff the result against the recorded schema.
+      # Fails if a migration is missing from the repo, or if production was
+      # changed outside of one.
+      - name: Schema rebuilds from migrations
+        run: ./scripts/rebuild-test.sh

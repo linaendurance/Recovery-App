@@ -59,3 +59,32 @@ Until that is done, the reset flow works but will silently stop delivering
 under any real volume — and a reset email that never arrives is
 indistinguishable, to the person waiting, from an account that no longer
 exists.
+
+## Backups and the restore path
+
+Supabase's free tier gives daily snapshots and no point-in-time recovery. More
+to the point, a backup nobody has restored is not a backup — so this repo
+carries the tooling to prove both halves.
+
+| Script | What it proves |
+| --- | --- |
+| `scripts/rebuild-test.sh` | Every migration applies to an empty database and reproduces the deployed schema exactly. Runs in CI on every push. |
+| `scripts/backup.sh` | Produces a full logical dump (schema + data, `public` and `auth`) that you hold yourself. |
+| `scripts/restore-test.sh` | Restores that dump into a throwaway database and reports row counts, so you find out the file is unusable *before* you need it. |
+
+The rebuild test compares against `supabase/schema.fingerprint`, a committed
+hash of every column, constraint, index, policy, function, trigger and
+RLS-enabled table. If someone changes production outside a migration, CI fails
+with `DRIFT` rather than the divergence going unnoticed until a restore.
+
+**Regenerating the fingerprint** — only after a deliberate schema change that
+is already captured in a migration:
+
+```bash
+scripts/rebuild-test.sh                     # confirm migrations apply
+psql "$SUPABASE_DB_URL" -A -F'|' -t \
+  -f scripts/schema-fingerprint.sql > supabase/schema.fingerprint
+```
+
+**Backup files contain every user's food log and journal in plain text.**
+Encrypt at rest, never commit, never put in unencrypted shared storage.
