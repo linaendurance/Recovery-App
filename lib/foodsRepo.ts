@@ -19,7 +19,15 @@ let cache: FoodItem[] | null = null;
 export async function getFoods(): Promise<FoodItem[]> {
   if (cache) return cache;
   const supabase = createClient();
-  const { data, error } = await supabase.from("food_items").select("*").order("name");
+  // Deprecated rows are excluded from the picker but deliberately stay in the
+  // table: historical entries still reference them, and their values must keep
+  // resolving to what was logged at the time. See the food_items_immutable
+  // trigger — a correction adds a new row rather than editing this one.
+  const { data, error } = await supabase
+    .from("food_items")
+    .select("*")
+    .is("deprecated_at", null)
+    .order("name");
   if (error || !data) throw new Error("Could not load the food list.");
   cache = data as FoodItem[];
   return cache;

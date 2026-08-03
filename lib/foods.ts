@@ -3,6 +3,15 @@
 // Fetching lives in lib/foodsRepo.ts.
 export type FoodGroup = "protein" | "carbs" | "fats" | "fruit" | "veg" | "dairy" | "legumes" | "nuts";
 
+/**
+ * A row from food_items.
+ *
+ * Nutrient values are IMMUTABLE once written — enforced by a database trigger,
+ * not convention. Correcting a value means inserting a replacement row and
+ * setting deprecated_at/replaced_by on the old one, so every entry already
+ * logged keeps the values it was logged against. Without that, fixing a single
+ * number silently rewrote every past day's totals.
+ */
 export type FoodItem = {
   id: string;
   name: string;
@@ -18,6 +27,9 @@ export type FoodItem = {
   iron: number;
   calcium: number;
   density: "low" | "medium" | "high";
+  /** Set when superseded. Deprecated foods stay resolvable but leave the picker. */
+  deprecated_at?: string | null;
+  replaced_by?: string | null;
 };
 
 export const GROUP_LABELS: Record<FoodGroup, string> = {
