@@ -63,6 +63,12 @@ export const LONG_GAP_MINS = 210;
 
 export function itemTotals(items: EntryItemRow[]): Totals {
   const t = emptyTotals();
+  // Defensive despite the type: PostgREST can return null for a nested select
+  // if the embedded resource resolves to nothing. Iterating that threw
+  // "TypeError: e is not iterable" and left History stuck on its loading state
+  // permanently, because the throw happened inside an async callback where no
+  // error boundary could catch it.
+  if (!Array.isArray(items)) return t;
   for (const item of items) {
     const f = item.food_items;
     if (!f) continue;
@@ -77,6 +83,24 @@ export function itemTotals(items: EntryItemRow[]): Totals {
   return t;
 }
 
+/**
+ * Coerces whatever the API returned into rows the rest of this module can
+ * trust. Call this at every fetch site rather than scattering null checks:
+ * the TypeScript types describe the happy path, and the network does not
+ * always agree.
+ */
+export function normalizeEntries(rows: unknown): EntryRow[] {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((r): r is EntryRow => Boolean(r) && typeof r === "object")
+    .map((r) => ({
+      ...r,
+      entry_items: Array.isArray(r.entry_items)
+        ? r.entry_items.filter((i) => Boolean(i) && typeof i === "object")
+        : [],
+    }));
+}
+
 export function computeAnalysis(entries: EntryRow[], nowMins: number, isToday: boolean): Analysis {
   const sorted = [...entries].sort((a, b) => a.mins_since_midnight - b.mins_since_midnight);
   const totals = emptyTotals();
@@ -89,7 +113,7 @@ export function computeAnalysis(entries: EntryRow[], nowMins: number, isToday: b
     const occTotals = itemTotals(e.entry_items);
     for (const k of Object.keys(totals) as NutrientKey[]) totals[k] += occTotals[k];
 
-    for (const item of e.entry_items) {
+    for (const item of e.entry_items ?? []) {
       const f = item.food_items;
       if (!f) continue;
       groups.add(f.food_group);

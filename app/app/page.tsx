@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { pad, dayKey, fmtTime, fmtGap, minsNow, longDate } from "@/lib/dates";
-import { computeAnalysis, LONG_GAP_MINS, type Analysis, type EntryRow } from "@/lib/analysis";
+import { computeAnalysis, normalizeEntries, LONG_GAP_MINS, type Analysis, type EntryRow } from "@/lib/analysis";
 import { todaysFact, responsiveFacts, sourceLabel } from "@/lib/facts";
 import { loadProfileContext } from "@/lib/profile";
 import { NUTRIENT_ORDER, referencesFor, type AgeBand } from "@/lib/nutrition";
@@ -49,7 +49,7 @@ export default function TodayPage() {
       return;
     }
     setBand(ctx.band);
-    setEntries((data ?? []) as unknown as EntryRow[]);
+    setEntries(normalizeEntries(data));
   }, []);
 
   useEffect(() => {

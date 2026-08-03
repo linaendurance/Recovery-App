@@ -13,7 +13,7 @@ targets or ceilings.
 ```bash
 npm install
 npm run dev      # http://localhost:3000
-npm test         # 36 unit tests over the pure logic
+npm test         # 40 unit tests over the pure logic
 npm run build    # production build
 ```
 
@@ -123,6 +123,34 @@ Supabase Edge Function (`signup-with-invite`, deployed separately from this
 repo) that checks the invite code first. That function is the only code
 anywhere that touches the database's service-role key, and that key never
 leaves Supabase's own servers.
+
+## Testing
+
+```bash
+npm run lint      # react-hooks rules — the only check that catches a
+                  # conditional hook, which crashed two screens once
+npm test          # 40 unit tests over the pure logic
+npm run e2e       # renders every signed-in screen in a real browser
+```
+
+The end-to-end run needs two servers:
+
+```bash
+npm run mock &                                    # fixture Supabase, port 54321
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=mock npm run build && npm start &
+npm run e2e
+```
+
+`scripts/mock-supabase.js` is a **fixture server, not a Supabase emulator**. It
+enforces no RLS and runs none of the real SQL, so a passing run says the React
+renders and the data flows — nothing about whether the database agrees. It
+exists because it is the only check that renders a component twice, and every
+crash-level bug in this app has lived in the loading → loaded transition.
+
+Its fixtures are deliberately hostile: a day with a long gap, an occasion
+missing a macro, one marked as feeling excessive, and one entry whose nested
+select came back `null` — the exact shape that hung History permanently.
 
 ## Invariants a new developer must not break
 

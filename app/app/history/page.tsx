@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fmtTime, fmtGap, longDate, dayKey } from "@/lib/dates";
-import { computeDayShapes, LONG_GAP_MINS, type DayShape, type EntryRow } from "@/lib/analysis";
+import { computeDayShapes, normalizeEntries, LONG_GAP_MINS, type DayShape, type EntryRow } from "@/lib/analysis";
 import { answeredPairs, type StoredAnswers } from "@/lib/journalBank";
 import { ENTRY_SELECT } from "@/lib/queries";
 import { reportSupabaseError } from "@/lib/reportError";
@@ -75,7 +75,7 @@ export default function HistoryPage() {
       setError("Couldn't load your history. Refresh to try again.");
       return;
     }
-    setShapes(computeDayShapes((entries ?? []) as unknown as EntryRow[]));
+    setShapes(computeDayShapes(normalizeEntries(entries)));
     setJournals((journalRows ?? []) as JournalRow[]);
   }, [windowDays]);
 

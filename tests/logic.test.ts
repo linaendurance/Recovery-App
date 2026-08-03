@@ -7,6 +7,7 @@ import {
   computeDayShapes,
   itemTotals,
   observations,
+  normalizeEntries,
   LONG_GAP_MINS,
   type EntryRow,
 } from "../lib/analysis";
@@ -347,4 +348,38 @@ test("searchFoods ranks prefix matches first and caps results", () => {
 
 test("searchFoods returns nothing for empty input", () => {
   assert.deepEqual(searchFoods([food()], "   "), []);
+});
+
+// --- resilience to what the API actually returns ---------------------------
+
+test("normalizeEntries survives a null nested select", () => {
+  // PostgREST returned entry_items: null for an embedded resource, which threw
+  // "TypeError: e is not iterable" and hung History on its loading state.
+  const rows = normalizeEntries([
+    { id: "a", entry_date: "2026-07-01", meal_type: "Lunch", mins_since_midnight: 720, entry_items: null },
+  ]);
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0].entry_items, []);
+  assert.doesNotThrow(() => computeDayShapes(rows));
+  assert.doesNotThrow(() => computeAnalysis(rows, 800, true));
+});
+
+test("normalizeEntries drops junk rather than propagating it", () => {
+  const rows = normalizeEntries([null, undefined, "nonsense", 42,
+    { id: "ok", entry_date: "2026-07-01", meal_type: "Lunch", mins_since_midnight: 720,
+      entry_items: [null, { qty: 1, food_items: null }] },
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].entry_items.length, 1);
+});
+
+test("normalizeEntries copes with a non-array payload", () => {
+  assert.deepEqual(normalizeEntries(null), []);
+  assert.deepEqual(normalizeEntries(undefined), []);
+  assert.deepEqual(normalizeEntries({ error: "boom" }), []);
+});
+
+test("itemTotals does not throw on a null item list", () => {
+  assert.doesNotThrow(() => itemTotals(null as never));
+  assert.equal(itemTotals(null as never).carbs, 0);
 });

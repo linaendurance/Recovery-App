@@ -70,3 +70,49 @@ jobs:
       # changed outside of one.
       - name: Schema rebuilds from migrations
         run: ./scripts/rebuild-test.sh
+
+  # Separate job: it needs a browser, so it should not slow the fast checks.
+  #
+  # This is the only check in the project that renders a component twice. Every
+  # crash-level bug found so far — a Rules of Hooks violation that broke Today
+  # and Summary on every load, and a null nested select that hung History
+  # forever — was invisible to the build, the type checker and the unit tests,
+  # and obvious here within seconds.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Start fixture server
+        run: |
+          node scripts/mock-supabase.js 54321 &
+          sleep 2
+          curl -sf http://127.0.0.1:54321/auth/v1/user > /dev/null
+
+      - name: Build and start against the fixture server
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key
+        run: |
+          npm run build
+          npm start &
+          npx wait-on -t 60000 http://127.0.0.1:3000/login
+
+      - name: Render every signed-in screen
+        run: |
+          mkdir -p shots
+          npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+          if-no-files-found: ignore

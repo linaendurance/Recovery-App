@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey, fmtTime, fmtGap, minsNow } from "@/lib/dates";
-import { computeAnalysis, observations, type EntryRow } from "@/lib/analysis";
+import { computeAnalysis, normalizeEntries, observations, type EntryRow } from "@/lib/analysis";
 import { GROUP_LABELS, GROUP_ORDER } from "@/lib/foods";
 import { tonightsInsight, sourceLabel } from "@/lib/facts";
 import { loadProfileContext } from "@/lib/profile";
@@ -44,7 +44,7 @@ export default function SummaryPage() {
       return;
     }
     setBand(ctx.band);
-    setEntries((data ?? []) as unknown as EntryRow[]);
+    setEntries(normalizeEntries(data));
   }, []);
 
   useEffect(() => {
