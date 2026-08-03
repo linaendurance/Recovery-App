@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [birthYear, setBirthYear] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,7 @@ export default function SignupPage() {
           invite_code: inviteCode.trim(),
           display_name: displayName.trim(),
           birth_year: birthYear.trim(),
+          consent,
         }),
       });
       const data = await res.json();
@@ -88,7 +90,27 @@ export default function SignupPage() {
           <label className="rn-label" htmlFor="password">Password</label>
           <input id="password" type="password" required minLength={8} autoComplete="new-password" className="rn-input"
             value={password} onChange={(e) => setPassword(e.target.value)} />
-          <p className="rn-hint">At least 8 characters.</p>
+          <p className="rn-hint">
+            At least 8 characters. Passwords are checked against known data breaches and rejected
+            if they appear in one.
+          </p>
+
+          <label className="rn-check rn-check--compact">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              required
+            />
+            <span>
+              I&apos;ve read how my data is handled.
+              <em>
+                Your food log and journal are stored under your account and no one else can read
+                them, including whoever invited you.{" "}
+                <Link href="/privacy" target="_blank">Read the privacy notice</Link>.
+              </em>
+            </span>
+          </label>
 
           {error && <p className="rn-error" role="alert">{error}</p>}
           <button type="submit" className="rn-btn" disabled={busy}>

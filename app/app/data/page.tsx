@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey } from "@/lib/dates";
 
 type DaySummary = { date: string; meals: number; hasJournal: boolean };
 
 export default function DataPage() {
+  const router = useRouter();
   const [days, setDays] = useState<DaySummary[] | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [confirmingAccount, setConfirmingAccount] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -98,6 +102,25 @@ export default function DataPage() {
     refresh();
   };
 
+  // Deleting the rows left the account itself behind, so "delete everything"
+  // did not actually erase the person. This removes the auth user, which
+  // cascades to the profile, every entry, every entry item and every journal
+  // answer in one transaction.
+  const deleteAccount = async () => {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("delete_my_account");
+    if (error) {
+      setBusy(false);
+      setConfirmingAccount(false);
+      setMsg("Couldn't delete the account. Nothing was removed — try again.");
+      return;
+    }
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
   return (
     <>
       <section className="rn-card">
@@ -147,6 +170,33 @@ export default function DataPage() {
           )}
         </div>
         {msg && <p className="rn-fine">{msg}</p>}
+      </section>
+
+      <section className="rn-card">
+        <div className="rn-label">Delete your account</div>
+        <p className="rn-note">
+          Removes the account itself along with every entry, every journal answer and your profile.
+          Immediate, and it cannot be undone. Export first if you want to keep anything.
+        </p>
+        <div className="rn-row">
+          {!confirmingAccount ? (
+            <button className="rn-link" onClick={() => setConfirmingAccount(true)}>
+              Delete my account permanently
+            </button>
+          ) : (
+            <span className="rn-confirm">
+              Delete your account and everything in it?
+              <button className="rn-link" onClick={deleteAccount} disabled={busy}>
+                {busy ? "Deleting…" : "Yes, delete my account"}
+              </button>
+              <button className="rn-link" onClick={() => setConfirmingAccount(false)}>Cancel</button>
+            </span>
+          )}
+        </div>
+        <p className="rn-fine">
+          What is stored and how it is handled is set out in the{" "}
+          <Link className="rn-link" href="/privacy">privacy notice</Link>.
+        </p>
       </section>
     </>
   );

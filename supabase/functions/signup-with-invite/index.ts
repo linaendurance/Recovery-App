@@ -15,6 +15,16 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // that rotating the service key does not reset rate-limit history.
 const IP_SALT = Deno.env.get("IP_HASH_SALT") ?? SERVICE_ROLE_KEY;
 
+// Cloudflare Turnstile. Optional: when TURNSTILE_SECRET is unset the check is
+// skipped, which is correct while sign-up is invite-gated. It MUST be set
+// before invite codes are removed — see the open-signup checklist in the repo.
+const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") ?? "";
+
+// Current version of the privacy notice. Bump together with VERSION in
+// app/privacy/page.tsx whenever the notice materially changes, so it stays
+// possible to tell who agreed to which text.
+const CONSENT_VERSION = "2026-08-01";
+
 // verify_jwt is off (it has to be — sign-up happens before there is a session),
 // so this endpoint is reachable by anyone. Previously it also sent
 // Access-Control-Allow-Origin: *, meaning any website could drive it. Set
@@ -118,6 +128,28 @@ async function timesPwned(password: string): Promise<number | null> {
 // "an account with that email already exists" would let anyone test whether a
 // given person uses an eating-disorder recovery app — a meaningful privacy
 // leak for this population, not just a generic enumeration issue.
+/** Cloudflare Turnstile verification. Fails CLOSED: a configured CAPTCHA that
+ *  cannot be verified must not silently let requests through. */
+async function captchaOk(token: string, ip: string): Promise<boolean> {
+  if (!TURNSTILE_SECRET) return true; // not configured; invite code is the gate
+  if (!token) return false;
+  try {
+    const body = new FormData();
+    body.append("secret", TURNSTILE_SECRET);
+    body.append("response", token);
+    body.append("remoteip", ip);
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return false;
+    return Boolean((await res.json())?.success);
+  } catch {
+    return false;
+  }
+}
+
 const GENERIC_REJECTION =
   "We couldn't create an account with those details. Check your invite code and email, or sign in if you already have an account.";
 
@@ -138,21 +170,20 @@ Deno.serve(async (req) => {
   const ip = forwarded.split(",")[0].trim() || "unknown";
   const ipHash = await hashIp(ip);
 
-  // Count recent failures from this IP and record this attempt. Brute-forcing
-  // invite codes across an unbounded number of requests is now capped.
-  const { data: recentFailures, error: rateError } = await admin.rpc(
-    "register_signup_attempt",
-    { p_ip_hash: ipHash, p_window_minutes: 15 },
-  );
+  // Per-IP limiting. Failures are capped to stop invite-code brute force;
+  // successes are capped separately so that removing the invite gate does not
+  // leave account creation unbounded from a single address.
+  const { data: rate, error: rateError } = await admin.rpc("register_signup_attempt", {
+    p_ip_hash: ipHash,
+    p_window_minutes: 15,
+  });
   if (rateError) {
     return json({ error: "Could not process the request. Try again." }, 500, origin);
   }
-  if ((recentFailures ?? 0) >= 5) {
-    return json(
-      { error: "Too many attempts. Wait 15 minutes and try again." },
-      429,
-      origin,
-    );
+  const failures = Number(rate?.failures ?? 0);
+  const successes = Number(rate?.successes ?? 0);
+  if (failures >= 5 || successes >= 3) {
+    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429, origin);
   }
 
   let body: {
@@ -161,6 +192,8 @@ Deno.serve(async (req) => {
     invite_code?: string;
     display_name?: string;
     birth_year?: number | string;
+    captcha_token?: string;
+    consent?: boolean;
   };
   try {
     body = await req.json();
@@ -173,6 +206,14 @@ Deno.serve(async (req) => {
   const inviteCode = (body.invite_code || "").trim().slice(0, 128);
   const displayName = (body.display_name || "").trim().slice(0, 80);
   const birthYear = Number.parseInt(String(body.birth_year ?? ""), 10);
+
+  if (!(await captchaOk((body.captcha_token || "").slice(0, 4096), ip))) {
+    return json({ error: "Could not verify you are human. Please try again." }, 400, origin);
+  }
+
+  if (body.consent !== true) {
+    return json({ error: "You need to accept the privacy notice to create an account." }, 400, origin);
+  }
 
   if (!email || !password || !inviteCode) {
     return json({ error: "Email, password and invite code are all required." }, 400, origin);
@@ -266,6 +307,15 @@ Deno.serve(async (req) => {
       origin,
     );
   }
+
+  // Record consent against the profile the trigger just created. Best-effort:
+  // the account is already valid, so a failure here is logged rather than
+  // rolled back, but it stays visible as a null consented_at.
+  const { error: consentError } = await admin
+    .from("profiles")
+    .update({ consented_at: new Date().toISOString(), consent_version: CONSENT_VERSION })
+    .eq("id", created.user.id);
+  if (consentError) console.error("consent_record_failed", created.user.id, consentError.message);
 
   await admin.rpc("mark_signup_success", { p_ip_hash: ipHash });
   return json({ success: true }, 200, origin);

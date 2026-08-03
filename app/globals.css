@@ -234,3 +234,12 @@ button,input{font:inherit}
 .rn-safety-list{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--ink-2)}
 .rn-safety-list b{color:var(--ink)}
 .rn-safety-fine{font-size:12.5px;color:var(--ink-2);margin:0;line-height:1.55}
+
+/* ---- open-signup hardening: consent, region picker, privacy ---- */
+.rn-check--compact{margin-top:16px;padding:12px 14px}
+.rn-check--compact span{font-size:13.5px}
+.rn-region-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.rn-region-select{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.rn-safety-detail{display:block;font-style:normal;font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.rn-safety-unverified{display:block;font-style:normal;font-size:12px;color:var(--clay);margin-top:3px}
+.rn-todo{background:#fdf7ec;border-color:#f0e2c8}
