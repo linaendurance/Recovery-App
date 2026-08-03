@@ -22,7 +22,9 @@ export default function DataPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setBusy(false); // otherwise the button stays stuck in its busy state forever
+      setBusy(false);
+      setDays([]); // never leave the list on its loading placeholder
+      setMsg("Your session has ended. Sign in again to continue.");
       return;
     }
 

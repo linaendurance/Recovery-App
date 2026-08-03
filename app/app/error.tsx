@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportError } from "@/lib/reportError";
 import Link from "next/link";
 
 /**
@@ -16,7 +17,7 @@ export default function AppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("app_section_error", { digest: error.digest });
+    reportError(error, { where: "boundary.app", extra: { digest: error.digest ?? null } });
   }, [error]);
 
   return (

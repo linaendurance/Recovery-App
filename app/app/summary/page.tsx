@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey, fmtTime, fmtGap, minsNow } from "@/lib/dates";
 import { computeAnalysis, observations, type EntryRow } from "@/lib/analysis";
@@ -9,6 +9,7 @@ import { tonightsInsight, sourceLabel } from "@/lib/facts";
 import { loadProfileContext } from "@/lib/profile";
 import { NUTRIENT_ORDER, referencesFor, FUEL_RATIONALE, type AgeBand } from "@/lib/nutrition";
 import { ENTRY_SELECT } from "@/lib/queries";
+import { reportSupabaseError } from "@/lib/reportError";
 
 export default function SummaryPage() {
   const [entries, setEntries] = useState<EntryRow[] | null>(null);
@@ -21,7 +22,12 @@ export default function SummaryPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    // Was `if (!user) return;`, which left the screen on its loading
+    // state forever when a session expired mid-use.
+    if (!user) {
+      setError("Your session has ended. Sign in again to continue.");
+      return;
+    }
 
     const [{ data, error }, ctx] = await Promise.all([
       supabase
@@ -33,6 +39,7 @@ export default function SummaryPage() {
     ]);
 
     if (error) {
+      reportSupabaseError(error, { where: "summary.load" });
       setError("Couldn't load today's summary. Refresh to try again.");
       return;
     }
@@ -66,11 +73,11 @@ export default function SummaryPage() {
     load();
   };
 
-  if (error) return <div className="rn-card rn-error-card">{error}</div>;
-  if (entries === null) return <div className="rn-card rn-quiet">Building today&apos;s summary…</div>;
+  if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
+  if (entries === null) return <div className="rn-card rn-quiet" role="status" aria-live="polite">Building today&apos;s summary…</div>;
 
-  const a = computeAnalysis(entries, minsNow(new Date()), true);
-  const obs = observations(a);
+  const a = useMemo(() => computeAnalysis(entries, minsNow(new Date()), true), [entries]);
+  const obs = useMemo(() => observations(a), [a]);
   const repeated = [...a.names.entries()].filter(([, n]) => n > 1);
   const insight = tonightsInsight(dayKey(new Date()));
   const references = referencesFor(band);

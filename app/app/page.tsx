@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { pad, dayKey, fmtTime, fmtGap, minsNow, longDate } from "@/lib/dates";
@@ -9,6 +9,7 @@ import { todaysFact, responsiveFacts, sourceLabel } from "@/lib/facts";
 import { loadProfileContext } from "@/lib/profile";
 import { NUTRIENT_ORDER, referencesFor, type AgeBand } from "@/lib/nutrition";
 import { ENTRY_SELECT } from "@/lib/queries";
+import { reportSupabaseError } from "@/lib/reportError";
 
 export default function TodayPage() {
   const [now, setNow] = useState(new Date());
@@ -26,7 +27,12 @@ export default function TodayPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    // Was `if (!user) return;`, which left the screen on its loading
+    // state forever when a session expired mid-use.
+    if (!user) {
+      setError("Your session has ended. Sign in again to continue.");
+      return;
+    }
 
     const [{ data, error }, ctx] = await Promise.all([
       supabase
@@ -38,6 +44,7 @@ export default function TodayPage() {
     ]);
 
     if (error) {
+      reportSupabaseError(error, { where: "today.load" });
       setError("Couldn't load today's log. Refresh to try again.");
       return;
     }
@@ -49,11 +56,13 @@ export default function TodayPage() {
     load();
   }, [load]);
 
-  if (error) return <div className="rn-card rn-error-card">{error}</div>;
-  if (entries === null) return <div className="rn-card rn-quiet">Opening today&apos;s log…</div>;
+  if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
+  if (entries === null) return <div className="rn-card rn-quiet" role="status" aria-live="polite">Opening today&apos;s log…</div>;
 
   const nowMins = minsNow(now);
-  const a = computeAnalysis(entries, nowMins, true);
+  // Recomputed only when the log or the clock tick changes, not on every
+  // render. Cheap at 5 entries, wasteful once someone has years of them.
+  const a = useMemo(() => computeAnalysis(entries, nowMins, true), [entries, nowMins]);
   const fact = todaysFact(dayKey(now));
   const responsive = responsiveFacts(a);
   const references = referencesFor(band);

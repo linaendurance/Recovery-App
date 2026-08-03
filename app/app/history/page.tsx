@@ -6,6 +6,7 @@ import { fmtTime, fmtGap, longDate, dayKey } from "@/lib/dates";
 import { computeDayShapes, LONG_GAP_MINS, type DayShape, type EntryRow } from "@/lib/analysis";
 import { answeredPairs, type StoredAnswers } from "@/lib/journalBank";
 import { ENTRY_SELECT } from "@/lib/queries";
+import { reportSupabaseError } from "@/lib/reportError";
 
 type JournalRow = {
   entry_date: string;
@@ -46,7 +47,12 @@ export default function HistoryPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    // Was `if (!user) return;`, which left the screen on its loading
+    // state forever when a session expired mid-use.
+    if (!user) {
+      setError("Your session has ended. Sign in again to continue.");
+      return;
+    }
 
     const from = windowStart(windowDays);
     let entryQuery = supabase.from("entries").select(ENTRY_SELECT).eq("user_id", user.id);
@@ -65,6 +71,7 @@ export default function HistoryPage() {
       await Promise.all([entryQuery, journalQuery]);
 
     if (entryError || journalError) {
+      reportSupabaseError(entryError ?? journalError, { where: "history.load" });
       setError("Couldn't load your history. Refresh to try again.");
       return;
     }
@@ -78,9 +85,9 @@ export default function HistoryPage() {
     load();
   }, [load]);
 
-  if (error) return <div className="rn-card rn-error-card">{error}</div>;
+  if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
   if (shapes === null || journals === null) {
-    return <div className="rn-card rn-quiet">Opening your history…</div>;
+    return <div className="rn-card rn-quiet" role="status" aria-live="polite">Opening your history…</div>;
   }
 
   return (

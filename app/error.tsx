@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportError } from "@/lib/reportError";
 
 /**
  * Root error boundary.
@@ -21,9 +22,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Deliberately logs the digest and nothing else. Wiring a real error
-    // tracker here is the correct next step; sending it user content is not.
-    console.error("app_error", { digest: error.digest });
+    // Digest only — Next's hashed identifier. It carries no message text, so
+    // no journal content or food entry can leak into a report.
+    reportError(error, { where: "boundary.root", extra: { digest: error.digest ?? null } });
   }, [error]);
 
   return (

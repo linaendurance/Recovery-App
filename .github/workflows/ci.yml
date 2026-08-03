@@ -1,0 +1,50 @@
+name: CI
+
+# Nothing ran tests or the build on push before this. A green branch was an
+# assumption, not a fact.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # Type errors are build failures in Next, but running tsc directly gives
+      # a clearer signal and catches things the build tolerates.
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      # Every JSON file must parse strictly. tsconfig.json previously contained
+      # comments, which TypeScript accepts and JSON.parse does not.
+      - name: Validate JSON files
+        run: |
+          for f in $(git ls-files '*.json' | grep -v package-lock); do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" \
+              || { echo "INVALID JSON: $f"; exit 1; }
+            echo "ok: $f"
+          done
+
+      # Repo migration filenames must match the versions actually applied to
+      # the database, or `supabase db push` silently re-runs them.
+      - name: Migration filenames are unique and ordered
+        run: |
+          dupes=$(ls supabase/migrations | cut -d_ -f1 | sort | uniq -d)
+          if [ -n "$dupes" ]; then echo "duplicate migration versions: $dupes"; exit 1; fi
+          echo "migration versions unique: $(ls supabase/migrations | wc -l) files"

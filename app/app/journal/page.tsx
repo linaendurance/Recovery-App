@@ -20,7 +20,11 @@ export default function JournalPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setError("Your session has ended. Sign in again to continue.");
+        setLoading(false);
+        return;
+      }
 
       const today = dayKey(new Date());
 
@@ -89,8 +93,8 @@ export default function JournalPage() {
     setSavedAt(new Date().toISOString());
   };
 
-  if (error) return <div className="rn-card rn-error-card">{error}</div>;
-  if (loading || !prompts) return <div className="rn-card rn-quiet">Opening today&apos;s reflection…</div>;
+  if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
+  if (loading || !prompts) return <div className="rn-card rn-quiet" role="status" aria-live="polite">Opening today&apos;s reflection…</div>;
 
   return (
     <section className="rn-card">
