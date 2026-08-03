@@ -25,6 +25,12 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      # ESLint's react-hooks rules are the ONLY check that catches a hook
+      # called after an early return. The build, tsc and the unit tests all
+      # passed while Today and Summary crashed on load.
+      - name: Lint
+        run: npm run lint
+
       - name: Unit tests
         run: npm test
 

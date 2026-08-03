@@ -73,11 +73,12 @@ export default function SummaryPage() {
     load();
   };
 
+  // Hooks must run before any early return — see the note in app/app/page.tsx.
+  const a = useMemo(() => computeAnalysis(entries ?? [], minsNow(new Date()), true), [entries]);
+  const obs = useMemo(() => observations(a), [a]);
+
   if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
   if (entries === null) return <div className="rn-card rn-quiet" role="status" aria-live="polite">Building today&apos;s summary…</div>;
-
-  const a = useMemo(() => computeAnalysis(entries, minsNow(new Date()), true), [entries]);
-  const obs = useMemo(() => observations(a), [a]);
   const repeated = [...a.names.entries()].filter(([, n]) => n > 1);
   const insight = tonightsInsight(dayKey(new Date()));
   const references = referencesFor(band);

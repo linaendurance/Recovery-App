@@ -56,13 +56,15 @@ export default function TodayPage() {
     load();
   }, [load]);
 
+  // Hooks must run before any early return, or React sees a different number
+  // of them once `entries` loads and throws "Rendered more hooks than during
+  // the previous render". Memoising below the guards crashed this screen on
+  // every load.
+  const nowMins = minsNow(now);
+  const a = useMemo(() => computeAnalysis(entries ?? [], nowMins, true), [entries, nowMins]);
+
   if (error) return <div className="rn-card rn-error-card" role="alert">{error}</div>;
   if (entries === null) return <div className="rn-card rn-quiet" role="status" aria-live="polite">Opening today&apos;s log…</div>;
-
-  const nowMins = minsNow(now);
-  // Recomputed only when the log or the clock tick changes, not on every
-  // render. Cheap at 5 entries, wasteful once someone has years of them.
-  const a = useMemo(() => computeAnalysis(entries, nowMins, true), [entries, nowMins]);
   const fact = todaysFact(dayKey(now));
   const responsive = responsiveFacts(a);
   const references = referencesFor(band);
