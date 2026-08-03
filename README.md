@@ -13,8 +13,11 @@ targets or ceilings.
 ```bash
 npm install
 npm run dev      # http://localhost:3000
+npm test         # 36 unit tests over the pure logic
 npm run build    # production build
 ```
+
+Requires Node 20+ (pinned in `package.json` engines and `netlify.toml`).
 
 There is no `.env` file to create — see "Why there's no `.env`" below.
 
@@ -30,7 +33,8 @@ There is no `.env` file to create — see "Why there's no `.env`" below.
 | `/app/summary` | **Summary** — nutrition totals, meal timing, fuel consistency, food diversity, recovery observations, per-entry deletion. |
 | `/app/history` | **History** — meal timing across every logged day including overnight fasts, and every past reflection. |
 | `/app/sources` | **Sources** — every reference value with its citation, and an explicit list of the numbers the app invented itself. |
-| `/app/data` | **Data** — saved days, full JSON export, and permanent delete-everything. |
+| `/app/data` | **Data** — saved days, full JSON export, delete-everything, and permanent account deletion. |
+| `/privacy` | **Privacy notice** — public, readable before creating an account. Versioned; `profiles.consent_version` records which text each person accepted. |
 
 ## The four things this app is for
 
@@ -139,6 +143,16 @@ use: `ALLOWED_ORIGINS` and `IP_HASH_SALT`.
   an arbitrary host.
 - Fonts are self-hosted via `next/font`; the app makes no third-party requests
   at runtime and runs no analytics.
+
+### Abuse and erasure controls
+
+- Sign-up is limited per IP on both failed *and* successful attempts, so
+  removing the invite gate does not leave account creation unbounded.
+- `log_entry` caps 40 eating occasions per date and 40 foods per occasion.
+- Passwords are screened against Have I Been Pwned using k-anonymity.
+- `delete_my_account()` removes the auth user, cascading to profile, entries,
+  entry items and journal answers.
+- Turnstile CAPTCHA is wired but inactive until `TURNSTILE_SECRET` is set.
 
 ### Still outstanding
 
