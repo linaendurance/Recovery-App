@@ -1,13 +1,11 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 // createServerClient is overloaded (the old get/set/remove shape as well as
 // this one), so TypeScript can't infer this parameter on its own.
 type CookiesToSet = { name: string; value: string; options: CookieOptions }[];
 
-const SUPABASE_URL = "https://gzhujyagleysqqmhsdyg.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6aHVqeWFnbGV5c3FxbWhzZHlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTc0MzMsImV4cCI6MjEwMDgzMzQzM30._eG422FhCohMgL5laBGgUCz0M8z0tO3ASGMQDF6kqBw";
 
 // Used inside Server Components and Server Actions. Reads the user's
 // session from cookies — it never uses the service-role key, so it is

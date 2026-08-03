@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
-
+// Pure module: types, labels and search. Deliberately imports NOTHING that
+// touches the network, so this logic stays unit-testable on its own.
+// Fetching lives in lib/foodsRepo.ts.
 export type FoodGroup = "protein" | "carbs" | "fats" | "fruit" | "veg" | "dairy" | "legumes" | "nuts";
 
 export type FoodItem = {
@@ -27,20 +28,6 @@ export const GROUP_LABELS: Record<FoodGroup, string> = {
 export const GROUP_ORDER: FoodGroup[] = [
   "protein", "carbs", "fats", "dairy", "legumes", "nuts", "fruit", "veg",
 ];
-
-let cache: FoodItem[] | null = null;
-
-// The food list is small (115 rows) and only ever changes via a migration,
-// so it's fetched once per session and reused — this avoids a network
-// round trip on every keystroke in the autocomplete box.
-export async function getFoods(): Promise<FoodItem[]> {
-  if (cache) return cache;
-  const supabase = createClient();
-  const { data, error } = await supabase.from("food_items").select("*").order("name");
-  if (error || !data) throw new Error("Could not load the food list.");
-  cache = data as FoodItem[];
-  return cache;
-}
 
 // Fuzzy search: prefix match beats word-start match beats substring beats
 // a loose subsequence match, so "cra" finds "Crackers" before something

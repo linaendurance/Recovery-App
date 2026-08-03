@@ -9,8 +9,20 @@
 //  - Referrer-Policy stops the URL of the page you were on leaking onward.
 //  - frame-ancestors / X-Frame-Options stop the app being framed and
 //    clickjacked into deleting somebody's data.
-const SUPABASE_ORIGIN = "https://gzhujyagleysqqmhsdyg.supabase.co";
-const SUPABASE_WS = "wss://gzhujyagleysqqmhsdyg.supabase.co";
+// Derived from the same variable the app connects with, so the CSP can never
+// drift from the database it is actually talking to. Hardcoding it here was
+// the fourth copy of the project ref and would have silently blocked every
+// request the moment the app was pointed at a staging project.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error(
+    "Missing NEXT_PUBLIC_SUPABASE_URL. Copy .env.example to .env.local, or set it " +
+      "in your host's environment settings. Without it the Content-Security-Policy " +
+      "cannot allow the database origin and every request would be blocked."
+  );
+}
+const SUPABASE_ORIGIN = new URL(supabaseUrl).origin;
+const SUPABASE_WS = SUPABASE_ORIGIN.replace(/^https:/, "wss:");
 
 const isDev = process.env.NODE_ENV === "development";
 

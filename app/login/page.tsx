@@ -50,6 +50,9 @@ export default function LoginPage() {
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p className="rn-auth-footer">
+          <Link href="/forgot">Forgotten your password?</Link>
+        </p>
         <p className="rn-auth-footer">Have an invite code? <Link href="/signup">Create an account</Link></p>
       </div>
     </main>

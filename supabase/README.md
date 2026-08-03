@@ -17,6 +17,11 @@ project `gzhujyagleysqqmhsdyg` (`recovery-nutrition-tracker`).
   ```
 
 - `functions/signup-with-invite/` — source of the deployed Edge Function.
+- `functions/password-check/` — breach-screens a candidate password during the
+  password-RESET flow, which goes through Supabase Auth directly and so never
+  reaches `signup-with-invite`. Deployed with `verify_jwt = true`: the reset
+  link establishes a recovery session first, so a caller always has a token,
+  which stops it being used as an open proxy to the HIBP API.
   Deployed with `verify_jwt = false`, which is required: sign-up happens
   before a session exists. That makes it a public endpoint, which is why it
   does its own origin checking and rate limiting.
@@ -42,3 +47,15 @@ That is intentional and correct: it denies all access to `anon` and
 Supabase's linter reports this as an INFO-level `rls_enabled_no_policy` finding
 on both tables — it is a false positive here, not something to "fix" by adding
 a policy.
+
+## Email delivery — required before real users
+
+Password reset sends mail through Supabase's built-in SMTP, which is rate
+limited to a handful of messages per hour and is explicitly not intended for
+production. Configure a real provider under *Project Settings → Auth → SMTP*
+before anyone depends on being able to recover their account.
+
+Until that is done, the reset flow works but will silently stop delivering
+under any real volume — and a reset email that never arrives is
+indistinguishable, to the person waiting, from an account that no longer
+exists.

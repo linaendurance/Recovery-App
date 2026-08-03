@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { pad, dayKey, recentDays } from "@/lib/dates";
-import { getFoods, searchFoods, GROUP_LABELS, type FoodItem } from "@/lib/foods";
+import { searchFoods, GROUP_LABELS, type FoodItem } from "@/lib/foods";
+import { getFoods } from "@/lib/foodsRepo";
 import { itemTotals } from "@/lib/analysis";
 import { macroPresence, PRESENCE_THRESHOLD } from "@/lib/nutrition";
 

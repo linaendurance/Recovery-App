@@ -4,8 +4,9 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { FUNCTIONS_URL } from "@/lib/env";
 
-const FUNCTION_URL = "https://gzhujyagleysqqmhsdyg.supabase.co/functions/v1/signup-with-invite";
+const FUNCTION_URL = `${FUNCTIONS_URL}/signup-with-invite`;
 
 export default function SignupPage() {
   const router = useRouter();

@@ -19,7 +19,22 @@ npm run build    # production build
 
 Requires Node 20+ (pinned in `package.json` engines and `netlify.toml`).
 
-There is no `.env` file to create — see "Why there's no `.env`" below.
+## Configuration
+
+Copy `.env.example` to `.env.local`:
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Which Supabase project to talk to. Also derives the Edge Function base URL and the `connect-src` origin in the Content-Security-Policy, so those can never drift from it. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public API key. Grants nothing on its own — every table is protected by Row Level Security. |
+
+Both are public by design. They are environment variables so the app can be
+pointed at a staging database **without editing source**, not because they are
+secret. A missing value fails the build with an explicit message rather than
+producing an app that renders and then breaks on first use.
+
+Set the same two variables in Netlify under *Site configuration → Environment
+variables* before the first deploy, or the build will fail.
 
 ## Routes
 
@@ -27,6 +42,7 @@ There is no `.env` file to create — see "Why there's no `.env`" below.
 | --- | --- |
 | `/` | Redirects to `/app` when signed in, `/login` otherwise. |
 | `/login`, `/signup` | The two auth screens. Sign-up requires an invite code. |
+| `/forgot`, `/reset` | Password reset. `/forgot` emails a link; `/reset` consumes the recovery session and sets the new password, screening it against known breaches first. |
 | `/app` | **Today** — timeline ribbon of when you ate, what you've eaten, facts selected from your own log, and nutrient adequacy bars. |
 | `/app/log` | **Log a meal** — four steps: time, eating occasion, foods via fuzzy autocomplete, then how the episode felt. |
 | `/app/journal` | **Journal** — evening reflection prompts that rotate by weekly theme, plus an always-present free-text slot. |
@@ -108,17 +124,14 @@ repo) that checks the invite code first. That function is the only code
 anywhere that touches the database's service-role key, and that key never
 leaves Supabase's own servers.
 
-## Why there's no `.env`
+## Module boundaries worth preserving
 
-The Supabase project URL and anon key aren't secret — they're meant to be
-public, and are safe sitting in the source files (`middleware.ts`,
-`lib/supabase/client.ts`, `lib/supabase/server.ts`). Privacy is enforced by Row
-Level Security in the database, not by hiding these two values. Nothing in this
-app currently requires a real environment-variable secret.
-
-If the app ever gains a genuine server-side secret — an Anthropic API key for
-the planned Coach tab, for instance — that one *does* belong in an environment
-variable and must never be committed.
+`lib/foods.ts` holds pure logic (types, labels, fuzzy search) and imports
+nothing that touches the network. Fetching lives in `lib/foodsRepo.ts`. These
+were one file until importing `searchFoods` in a test dragged in the Supabase
+client and its configuration, and the whole test suite failed. Keep I/O out of
+the pure modules — the test suite is the thing that notices when it creeps back
+in.
 
 ## Back end
 
