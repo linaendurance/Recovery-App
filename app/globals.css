@@ -243,3 +243,22 @@ button,input{font:inherit}
 .rn-safety-detail{display:block;font-style:normal;font-size:12.5px;color:var(--ink-2);margin-top:3px}
 .rn-safety-unverified{display:block;font-style:normal;font-size:12px;color:var(--clay);margin-top:3px}
 .rn-todo{background:#fdf7ec;border-color:#f0e2c8}
+
+/* ---- touch target sizes (measured on a real phone viewport) ---- */
+/*
+ * Verified with a headless Chromium at 320/360/390/430px. The layout has no
+ * horizontal overflow at any of them, and inline links inside a sentence are
+ * exempt from WCAG 2.5.8's target-size rule. These four are NOT inline — they
+ * are standalone controls that were 15-36px tall, which on a phone means
+ * mis-taps on the recovery link, the primary navigation, and a destructive
+ * delete. Scoped deliberately: applying this to .rn-link everywhere would
+ * break links that sit mid-sentence.
+ */
+.rn-auth-footer a,
+.rn-app-header .rn-link{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:44px; padding:0 6px;
+}
+.rn-tabs .rn-tab{display:inline-flex; align-items:center; min-height:44px}
+.rn-remove{min-width:44px; min-height:44px; display:inline-flex;
+  align-items:center; justify-content:center}

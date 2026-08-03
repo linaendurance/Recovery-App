@@ -13,3 +13,4 @@ out/
 backups/
 *.sql.gz
 *.dump
+shots/
