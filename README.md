@@ -124,6 +124,20 @@ repo) that checks the invite code first. That function is the only code
 anywhere that touches the database's service-role key, and that key never
 leaves Supabase's own servers.
 
+## Invariants a new developer must not break
+
+- **Food nutrient values are immutable.** Enforced by a database trigger, not
+  convention. `entry_items` stores only `(food_item_id, qty)`, so editing a
+  value would silently rewrite every historical day's totals. Corrections
+  insert a NEW row and set `deprecated_at`/`replaced_by` on the old one. There
+  is an explicit escape hatch (`set local app.allow_food_value_change = 'on'`)
+  for deliberate migrations.
+- **The repo must be able to rebuild the schema.** `scripts/rebuild-test.sh`
+  applies every migration to an empty database and diffs the result against
+  `supabase/schema.fingerprint`. It runs in CI. If it reports `DRIFT`, either a
+  migration is missing from the repo or production was changed outside one —
+  in both cases the restore path is broken until it is fixed.
+
 ## Module boundaries worth preserving
 
 `lib/foods.ts` holds pure logic (types, labels, fuzzy search) and imports
@@ -169,9 +183,13 @@ use: `ALLOWED_ORIGINS` and `IP_HASH_SALT`.
 
 ### Still outstanding
 
-- **Leaked-password protection is disabled** in Supabase Auth. Turn it on in
-  Dashboard → Authentication → Policies; it checks new passwords against
-  HaveIBeenPwned. Cannot be set from a migration.
+- **Supabase Auth's own leaked-password protection is still disabled** (a
+  dashboard toggle; it cannot be set from a migration). Both app paths that set
+  a password — sign-up and reset — already screen against Have I Been Pwned via
+  Edge Functions, so this is defence in depth rather than an open gap. Turning
+  it on would also cover any auth flow added later that bypasses those.
+- **SMTP is not configured.** Password reset sends through Supabase's built-in
+  sender, which is rate limited and not for production.
 - `npm audit` reports advisories that are only fixed in Next 15/16. This app is
   on 14.2.35, the last of the 14.x line, so clearing them means a major upgrade.
 

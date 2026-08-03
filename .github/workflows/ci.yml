@@ -29,11 +29,15 @@ jobs:
         run: npm test
 
       - name: Production build
-        # Public by design (see README "Configuration"), but they must be
-        # present or the build fails by design.
+        # Configuration is mandatory (see README "Configuration"), so the build
+        # needs values. CI verifies that the code COMPILES, not that it can
+        # reach a real database — so it falls back to a placeholder rather than
+        # requiring repository variables to be configured before CI can pass.
+        # Set the real values as Actions variables only if you want CI to build
+        # against the true project ref.
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
         run: npm run build
 
       # Every JSON file must parse strictly. tsconfig.json previously contained

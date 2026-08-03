@@ -32,8 +32,9 @@ Set these on the Edge Function before the app is used by anyone real:
 
 | Secret | Why |
 | --- | --- |
-| `ALLOWED_ORIGINS` | Comma-separated exact origins allowed to call sign-up, e.g. `https://recovery.example.com`. Until this is set the function falls back to allowing `localhost` and `*.vercel.app` only — fine for development, not for production. |
-| `IP_HASH_SALT` | Long random string. Salts the hash of caller IPs used for rate limiting so the attempt log cannot be reversed into a list of who tried to sign up. |
+| `ALLOWED_ORIGINS` | Comma-separated exact origins allowed to call the functions. Until set, they fall back to the deployed Netlify origin, deploy previews **of that site only**, and localhost. Set it explicitly once there is a custom domain. |
+| `IP_HASH_SALT` | Long random string. Salts the hash of caller IPs used for rate limiting so the attempt log cannot be reversed into a list of who tried to sign up. Falls back to the service role key, which is secret but rotates. |
+| `TURNSTILE_SECRET` | **Optional.** When unset, the CAPTCHA check is skipped — correct while sign-up is invite-gated. **Required before invite codes are removed.** |
 
 ```bash
 supabase secrets set ALLOWED_ORIGINS="https://your-domain" IP_HASH_SALT="$(openssl rand -hex 32)"

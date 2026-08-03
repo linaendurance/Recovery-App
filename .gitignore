@@ -6,3 +6,10 @@ out/
 .env*.local
 *.tsbuildinfo
 .DS_Store
+
+# Database dumps produced by scripts/backup.sh. These contain EVERY user's food
+# log and journal in plain text — the most sensitive files this project can
+# produce. Ignored so that a routine `git add -A` cannot publish them.
+backups/
+*.sql.gz
+*.dump
