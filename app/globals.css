@@ -1,7 +1,7 @@
 :root{
-  --ink:#232636; --ink-2:#6b6f83; --ground:#f1f0f7; --surface:#ffffff;
+  --ink:#232636; --ink-2:#5b5f72; --ground:#f1f0f7; --surface:#ffffff;
   --line:#e0dfeb; --indigo:#5f639e; --indigo-deep:#484c80; --gold:#d8952f;
-  --sage:#5f8f7a; --clay:#b8657a; --radius:14px;
+  --sage:#5f8f7a; --sage-text:#3f6b58; --clay:#b8657a; --clay-text:#9c4b62; --radius:14px;
 }
 *{box-sizing:border-box}
 html,body{padding:0;margin:0}
@@ -85,7 +85,7 @@ button,input{font:inherit}
 .rn-bead{position:absolute;top:19px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--gold);border:2px solid #fff;box-shadow:0 0 0 1px #e2b96e}
 .rn-bead-time{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--ink-2);white-space:nowrap}
 .rn-ticks{position:relative;height:14px;margin-top:14px}
-.rn-ticks span{position:absolute;transform:translateX(-50%);font-size:10px;color:#a3a6b8}
+.rn-ticks span{position:absolute;transform:translateX(-50%);font-size:10px;color:var(--ink-2)}
 .rn-ribbon-legend{font-size:12.5px;color:var(--ink-2);margin-top:10px}
 
 .rn-list{list-style:none;margin:0;padding:0}
@@ -100,7 +100,7 @@ button,input{font:inherit}
 .rn-bars{display:flex;flex-direction:column;gap:13px}
 .rn-bar-row{}
 .rn-bar-head{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px}
-.rn-bar-head em{font-style:normal;color:#a3a6b8}
+.rn-bar-head em{font-style:normal;color:var(--ink-2)}
 .rn-bar{height:7px;background:#eeedf5;border-radius:4px;overflow:hidden}
 .rn-bar-fill{height:100%;background:var(--indigo);border-radius:4px;transition:width .4s ease}
 .rn-bar-fill.is-met{background:var(--sage)}
@@ -118,7 +118,7 @@ button,input{font:inherit}
 .rn-ac-list{list-style:none;margin:6px 0 0;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 22px rgba(35,38,54,.09);position:absolute;left:0;right:0;z-index:5}
 .rn-ac-item{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;font-size:14px;text-align:left;background:none;border:none;padding:8px 10px;border-radius:7px;cursor:pointer}
 .rn-ac-item.is-on{background:#f1f0fa}
-.rn-ac-item em{font-style:normal;color:#a3a6b8;white-space:nowrap}
+.rn-ac-item em{font-style:normal;color:var(--ink-2);white-space:nowrap}
 
 .rn-picked{list-style:none;margin:18px 0 0;padding:0}
 .rn-picked-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line);flex-wrap:wrap}
@@ -126,7 +126,7 @@ button,input{font:inherit}
 .rn-qty{display:flex;gap:4px;align-items:center}
 .rn-qty-b{font-size:12px;font-family:var(--font-mono),ui-monospace,monospace;background:#f6f5fb;border:1px solid var(--line);border-radius:7px;padding:5px 8px;cursor:pointer}
 .rn-qty-b.is-on{background:var(--indigo);color:#fff;border-color:var(--indigo)}
-.rn-remove{border:none;background:none;font-size:19px;color:#b0b3c2;cursor:pointer;padding:0 4px}
+.rn-remove{border:none;background:none;font-size:19px;color:#8b8fa0;cursor:pointer;padding:0 4px}
 
 .rn-jq{margin-bottom:18px}
 .rn-jq label{display:block;font-family:var(--font-display),Georgia,serif;font-weight:300;font-size:17px;line-height:1.4;margin-bottom:9px}
@@ -146,7 +146,7 @@ button,input{font:inherit}
 .rn-facts span{color:var(--ink-2)}
 
 .rn-groups{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.rn-group{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px dashed var(--line);color:#b0b3c2}
+.rn-group{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px dashed var(--line);color:#8b8fa0}
 .rn-group.is-on{background:#eef4f1;border:1px solid #cfe0d8;color:var(--sage)}
 
 .rn-obs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
@@ -166,14 +166,14 @@ button,input{font:inherit}
 
 /* ---- Milestone 4: macros, episode context, history, sources, safety ---- */
 
-.rn-cite{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#a3a6b8;margin:10px 0 0}
-.rn-cite-inline{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#a3a6b8;margin-top:7px}
+.rn-cite{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 0}
+.rn-cite-inline{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin-top:7px}
 .rn-because{display:block;font-size:12px;color:var(--indigo);margin-bottom:5px;font-weight:700}
 
 /* Macro presence pills */
 .rn-fuel{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
 .rn-fuel-pills{display:flex;flex-wrap:wrap;gap:6px}
-.rn-fuel-pill{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px dashed var(--line);color:#b0b3c2;white-space:nowrap}
+.rn-fuel-pill{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px dashed var(--line);color:#8b8fa0;white-space:nowrap}
 .rn-fuel-pill.is-on{background:#eef4f1;border:1px solid #cfe0d8;color:var(--sage)}
 .rn-fuel-pill em{font-style:normal;margin-left:5px;font-size:11px}
 
@@ -183,7 +183,7 @@ button,input{font:inherit}
 .rn-fuel-name{flex:1;font-size:14px;font-weight:700;min-width:110px}
 
 .rn-macro-mini{display:flex;gap:5px;margin-top:7px}
-.rn-macro-mini span{font-family:var(--font-mono),ui-monospace,monospace;font-size:10px;width:17px;height:17px;display:grid;place-items:center;border-radius:50%;border:1px dashed var(--line);color:#c2c4d0}
+.rn-macro-mini span{font-family:var(--font-mono),ui-monospace,monospace;font-size:10px;width:17px;height:17px;display:grid;place-items:center;border-radius:50%;border:1px dashed var(--line);color:#8b8fa0}
 .rn-macro-mini span.is-on{background:#eef4f1;border:1px solid #cfe0d8;color:var(--sage)}
 
 /* The felt-excessive marker */
@@ -241,7 +241,7 @@ button,input{font:inherit}
 .rn-region-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
 .rn-region-select{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 .rn-safety-detail{display:block;font-style:normal;font-size:12.5px;color:var(--ink-2);margin-top:3px}
-.rn-safety-unverified{display:block;font-style:normal;font-size:12px;color:var(--clay);margin-top:3px}
+.rn-safety-unverified{display:block;font-style:normal;font-size:12px;color:var(--clay-text);margin-top:3px}
 .rn-todo{background:#fdf7ec;border-color:#f0e2c8}
 
 /* ---- touch target sizes (measured on a real phone viewport) ---- */
@@ -262,3 +262,20 @@ button,input{font:inherit}
 .rn-tabs .rn-tab{display:inline-flex; align-items:center; min-height:44px}
 .rn-remove{min-width:44px; min-height:44px; display:inline-flex;
   align-items:center; justify-content:center}
+
+/* Contrast corrections, measured with axe-core rather than eyeballed.
+   The muted greys were 2.41:1 (#a3a6b8 on white) and 4.38:1 (--ink-2 on the
+   page background) against a 4.5:1 requirement. This app is read by people who
+   are unwell, often on a phone in bad light — contrast is not decoration. */
+.rn-tab{color:#4f5364}
+.rn-safety-unverified{color:var(--clay-text)}
+.rn-fuel-pill{color:var(--ink-2)}
+.rn-macro-mini span{color:var(--ink-2)}
+.rn-day-stats .is-flagged b,.rn-day-stats .is-marked b{color:var(--clay-text)}
+.rn-mark{color:var(--clay-text)}
+/* Sage reads as decoration on a fill but fails as text: #5f8f7a on the pale
+   green pill is 3.09:1. A darker tone for text only, fills unchanged. */
+.rn-fuel-pill.is-on,.rn-group.is-on,.rn-macro-mini span.is-on,.rn-saved-note{color:var(--sage-text)}
+/* The "not covered" food groups are information, not decoration — they tell
+   you what today missed, so they have to be readable. */
+.rn-group{color:var(--ink-2)}

@@ -46,12 +46,25 @@ const PAGES = ['/login', '/signup', '/forgot', '/privacy'];
         });
         return [...new Set(bad)].slice(0, 4);
       }, w);
-      // Tap targets below the 44px accessibility minimum.
+      // Effective tap targets. A control wrapped in a <label> is tapped via
+      // the whole label, and WCAG 2.5.8 exempts links inline within a
+      // sentence — measuring raw element boxes reported ~16 false positives
+      // and would have trained anyone reading this to ignore it.
       const smallTaps = await page.evaluate(() => {
         const bad = [];
-        document.querySelectorAll('a,button,input,select,textarea').forEach((el) => {
-          const r = el.getBoundingClientRect();
-          if (r.height > 0 && r.height < 44) bad.push(el.tagName.toLowerCase() + ':' + Math.round(r.height) + 'px');
+        document.querySelectorAll("a,button,input,select,textarea").forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          if (!rect.height) return;
+          const label = el.closest("label");
+          const eff = label ? label.getBoundingClientRect() : rect;
+          const par = el.parentElement;
+          const inline = el.tagName === "A" && par &&
+            ["P", "SPAN", "EM", "LI", "TD"].includes(par.tagName) &&
+            par.textContent.trim().length > el.textContent.trim().length + 5;
+          if (inline) return;
+          if (eff.height < 44 || eff.width < 44) {
+            bad.push(`${el.tagName.toLowerCase()} ${Math.round(eff.width)}x${Math.round(eff.height)}`);
+          }
         });
         return [...new Set(bad)].slice(0, 5);
       });

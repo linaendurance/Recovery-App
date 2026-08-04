@@ -131,6 +131,8 @@ npm run lint      # react-hooks rules — the only check that catches a
                   # conditional hook, which crashed two screens once
 npm test          # 40 unit tests over the pure logic
 npm run e2e       # renders every signed-in screen in a real browser
+npm run a11y      # axe-core, WCAG 2.1 A + AA, every screen
+npm run audit:mobile  # overflow + effective tap targets at 320-430px
 ```
 
 The end-to-end run needs two servers:
