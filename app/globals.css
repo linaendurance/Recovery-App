@@ -38,6 +38,14 @@ button,input{font:inherit}
 }
 .rn-input:focus{outline:none; border-color:var(--indigo); background:#fff}
 .rn-hint{font-size:12px; color:var(--ink-2); margin:2px 0 0}
+/* The "what this is and isn't" panel above the sign-up form. Deliberately
+   readable rather than fine print: it states the app's intended purpose, which
+   is the thing a regulator, a lawyer and a worried user all look for first. */
+.rn-signup-scope{background:#faf9fd;border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin:0 0 20px;font-size:12.5px;line-height:1.55}
+.rn-signup-scope b{color:var(--ink)}
+.rn-signup-scope p{margin:8px 0 0}
+.rn-error b{display:block;margin-bottom:4px}
+.rn-error p{margin:6px 0 0}
 .rn-error{font-size:13.5px; color:#9b4a5e; background:#fdf1f4; border:1px solid #f0d3dc; border-radius:9px; padding:9px 12px; margin:12px 0 0}
 
 .rn-btn{

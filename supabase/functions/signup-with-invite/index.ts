@@ -236,18 +236,27 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Age gate. Reference nutrient values differ sharply for under-18s, and the
-  // app should not silently show adult figures to an adolescent.
+  // Age gate, enforced HERE rather than in the browser — the sign-up page
+  // checks the same thing, but anything client-side can be edited away in
+  // devtools, so this is the copy that counts.
+  //
+  // 16, not 13. Several EU member states require parental consent below 16 for
+  // an information-society service (GDPR Art 8), and this app has no way to
+  // obtain or verify that. Separately, an eating-disorder monitoring tool used
+  // by a minor with no clinician and no parent involved is the highest-risk
+  // configuration it has — the reference values would also be wrong, since the
+  // app only carries female figures.
+  const MIN_AGE = 16;
   const thisYear = new Date().getUTCFullYear();
   if (!Number.isFinite(birthYear)) {
     return json({ error: "Year of birth is required." }, 400, origin);
   }
   const approxAge = thisYear - birthYear;
-  if (approxAge < 13) {
+  if (approxAge < MIN_AGE) {
     return json(
       {
         error:
-          "This app is for ages 13 and over. If you're younger, please work through a parent, carer or your care team.",
+          "This app is for ages 16 and over, so an account can't be created. Please speak to a parent, carer, your GP or your care team — and if you need support now, your national eating disorder association or crisis line can help whatever your age.",
       },
       400,
       origin,
