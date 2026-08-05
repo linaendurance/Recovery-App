@@ -117,10 +117,11 @@ export const REGIONS: Region[] = [
   //   1. 112 is the emergency number across the whole EU and every country
   //      listed here. It is the one figure in this block that is safe to
   //      rely on today.
-  //   2. Most of these countries have NO dedicated eating-disorder
-  //      helpline. Saying so in `detail` is more useful than implying one
-  //      exists — somebody who calls a general crisis line knowing that is
-  //      better served than somebody who expects specialist help.
+  //   2. Germany, Italy and France have dedicated eating-disorder services
+  //      and those are listed first for those countries. Most of the Balkan
+  //      countries do NOT, and each of those entries says so — somebody who
+  //      calls a general crisis line knowing that is better served than
+  //      somebody who expects specialist help and does not find it.
   // ---------------------------------------------------------------------
   {
     code: "EU",
@@ -145,6 +146,122 @@ export const REGIONS: Region[] = [
         detail:
           "A maintained directory of verified crisis lines by country. More reliable than any single number in this app, because it is kept up to date by people whose job that is.",
         url: "https://findahelpline.com",
+        verified: false,
+      },
+    ],
+  },
+  {
+    code: "DE",
+    label: "Germany / Deutschland",
+    emergency: "112",
+    resources: [
+      {
+        name: "BZgA — Beratungstelefon Essstörungen",
+        detail:
+          "The federal health education centre's dedicated eating-disorder counselling line.",
+        contact: "0221 892031",
+        url: "https://www.bzga-essstoerungen.de",
+        verified: false,
+      },
+      {
+        name: "ANAD e.V.",
+        detail: "Eating-disorder counselling and treatment referrals.",
+        contact: "089 219973-0",
+        url: "https://www.anad.de",
+        verified: false,
+      },
+      {
+        name: "TelefonSeelsorge",
+        detail: "Any kind of distress, free and around the clock.",
+        contact: "0800 111 0 111",
+        url: "https://www.telefonseelsorge.de",
+        verified: false,
+      },
+    ],
+  },
+  {
+    code: "IT",
+    label: "Italy / Italia",
+    emergency: "112",
+    resources: [
+      {
+        name: "Numero Verde SOS Disturbi Alimentari",
+        detail:
+          "The national freephone line for eating disorders, run through the Istituto Superiore di Sanità.",
+        contact: "800 180 969",
+        url: "https://www.iss.it",
+        verified: false,
+      },
+      {
+        name: "Telefono Amico Italia",
+        detail: "Emotional support for any kind of distress.",
+        contact: "02 2327 2327",
+        url: "https://www.telefonoamico.it",
+        verified: false,
+      },
+    ],
+  },
+  {
+    code: "FR",
+    label: "France",
+    emergency: "112",
+    resources: [
+      {
+        name: "Anorexie Boulimie Info Écoute",
+        detail: "Eating-disorder listening line run by the FNA-TCA federation.",
+        contact: "09 69 325 900",
+        url: "https://www.fna-tca.fr",
+        verified: false,
+      },
+      {
+        name: "3114 — prévention du suicide",
+        detail: "The national suicide prevention number, free and around the clock.",
+        contact: "3114",
+        url: "https://3114.fr",
+        verified: false,
+      },
+      {
+        name: "SOS Amitié",
+        detail: "Emotional support for any kind of distress.",
+        contact: "09 72 39 40 50",
+        url: "https://www.sos-amitie.com",
+        verified: false,
+      },
+    ],
+  },
+  {
+    code: "BE",
+    label: "Belgium / België / Belgique",
+    emergency: "112",
+    resources: [
+      {
+        // Belgium's services split by language rather than by region, so both
+        // are listed and labelled. Sending a French speaker to a Dutch-language
+        // line during a crisis is its own kind of failure.
+        name: "Zelfmoordlijn 1813 (Dutch)",
+        detail: "Suicide prevention line for Dutch speakers, around the clock.",
+        contact: "1813",
+        url: "https://www.zelfmoord1813.be",
+        verified: false,
+      },
+      {
+        name: "Centre de Prévention du Suicide (French)",
+        detail: "Suicide prevention line for French speakers, around the clock.",
+        contact: "0800 32 123",
+        url: "https://www.preventionsuicide.be",
+        verified: false,
+      },
+      {
+        name: "Télé-Accueil",
+        detail: "General emotional support, both language communities.",
+        contact: "107",
+        verified: false,
+      },
+      {
+        name: "Eetexpert",
+        detail:
+          "Flemish knowledge centre for eating disorders — a route to specialist services rather than a helpline itself.",
+        url: "https://www.eetexpert.be",
         verified: false,
       },
     ],
