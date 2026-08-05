@@ -12,6 +12,12 @@ export const metadata = {
 // person actually agreed to.
 const VERSION = "2026-08-01";
 
+// The named controller and the address data requests go to. GDPR Art 13(1)(a)
+// and (b) make both mandatory, and neither can be invented — they have to be a
+// real person or entity and an inbox somebody reads.
+const CONTROLLER = "Lina Nikolovska";
+const CONTACT = "nikolovskalina4@gmail.com";
+
 export default function PrivacyPage() {
   return (
     <main className="rn-shell">
@@ -100,13 +106,31 @@ export default function PrivacyPage() {
         </p>
       </section>
 
-      <section className="rn-card rn-todo">
-        <div className="rn-label">Before public launch</div>
+      <section className="rn-card">
+        <div className="rn-label">Who is responsible for this data</div>
         <p className="rn-note">
-          This notice still needs a named data controller and a contact address for data requests
-          before the app is opened beyond invited users. Both are legal requirements once strangers
-          can sign up, and neither can be invented — they have to be a real person or entity and a
-          monitored inbox.
+          The data controller is <b>{CONTROLLER}</b>, acting as an individual. That means one named
+          person is accountable for how your food log and journal are handled — not a company, and
+          not nobody.
+        </p>
+        <p className="rn-note">
+          For anything about your data — a copy of it, a correction, deletion, a complaint, or a
+          question about any of the above — write to{" "}
+          <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a>. Messages are read by one
+          person, so please allow a few days.
+        </p>
+        <p className="rn-fine">
+          If you are in the UK or the EEA and you are not satisfied with how a request was handled,
+          you have the right to complain to your national data protection authority.
+        </p>
+      </section>
+
+      <section className="rn-card">
+        <div className="rn-label">Related</div>
+        <p className="rn-note">
+          <Link className="rn-link" href="/terms">Terms of service</Link> — what this app is, what
+          it is not, and the agreement you accept by creating an account. This notice forms part of
+          it.
         </p>
       </section>
     </main>

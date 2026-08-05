@@ -92,6 +92,8 @@ export default function SafetyFooter() {
         <Link className="rn-link" href="/app/sources">Where the figures come from</Link>
         {" · "}
         <Link className="rn-link" href="/privacy">Privacy notice</Link>
+        {" · "}
+        <Link className="rn-link" href="/terms">Terms</Link>
       </p>
     </footer>
   );

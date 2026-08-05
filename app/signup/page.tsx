@@ -211,11 +211,12 @@ export default function SignupPage() {
               required
             />
             <span>
-              I understand this app is not treatment and cannot assess me.
+              I accept the terms of service, and I&apos;m {MIN_AGE} or over.
               <em>
-                It is a self-monitoring record. It does not diagnose, treat or monitor any
-                condition, and it is not a substitute for professional care. I am {MIN_AGE} or
-                over.
+                This app is a self-monitoring record. It does not diagnose, treat or monitor any
+                condition, and it is not a substitute for professional care.{" "}
+                <Link href="/terms" target="_blank">Read the terms</Link> — they cover password
+                recovery, backups and liability, and they are short.
               </em>
             </span>
           </label>
