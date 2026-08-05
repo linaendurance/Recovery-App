@@ -36,7 +36,17 @@ export default function LoginPage() {
       // The bracketed part is a technical code, not user content: an error
       // class name and an HTTP status. It carries nothing about the account,
       // and it turns "it doesn't work" into a reportable fact.
-      const code = `${signInError.name}${signInError.status ? ` ${signInError.status}` : ""}`;
+      // The message is the most diagnostic part — "Invalid API key" and
+      // "Failed to fetch" mean completely different things and only the text
+      // tells them apart. Auth error messages describe the request, never the
+      // account, so showing one leaks nothing.
+      const code = [
+        signInError.name,
+        signInError.status ? String(signInError.status) : null,
+        signInError.message?.slice(0, 80),
+      ]
+        .filter(Boolean)
+        .join(" · ");
       setError(
         wrongCredentials
           ? "That email and password don't match an account."
