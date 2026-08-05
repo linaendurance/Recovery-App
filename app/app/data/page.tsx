@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey } from "@/lib/dates";
+import { reportError, reportSupabaseError } from "@/lib/reportError";
 
 type DaySummary = { date: string; meals: number; hasJournal: boolean };
 
 export default function DataPage() {
   const router = useRouter();
   const [days, setDays] = useState<DaySummary[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAccount, setConfirmingAccount] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,24 +20,41 @@ export default function DataPage() {
 
   const refresh = useCallback(async () => {
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      reportError(userError, { where: "data.refresh.auth" });
+      setBusy(false);
+      setLoadError("Couldn't reach the server. Refresh to try again.");
+      return;
+    }
+    const user = userData?.user;
     if (!user) {
       setBusy(false);
-      setDays([]); // never leave the list on its loading placeholder
-      setMsg("Your session has ended. Sign in again to continue.");
+      setLoadError("Your session has ended. Sign in again to continue.");
       return;
     }
 
-    const [{ data: entries }, { data: journals }] = await Promise.all([
+    const [entriesResult, journalsResult] = await Promise.all([
       supabase.from("entries").select("entry_date").eq("user_id", user.id),
       supabase.from("journal_entries").select("entry_date").eq("user_id", user.id),
     ]);
 
-    const journalDates = new Set((journals ?? []).map((j) => j.entry_date));
+    // A failed count and a genuinely empty account rendered identically as
+    // "Nothing saved yet." One of those is a reasonable thing to see and the
+    // other is alarming, so they must not share a state.
+    if (entriesResult.error || journalsResult.error) {
+      reportSupabaseError(entriesResult.error ?? journalsResult.error, { where: "data.refresh" });
+      setLoadError("Couldn't load your saved days. Refresh to try again.");
+      return;
+    }
+
+    setLoadError(null);
+    const entries = entriesResult.data ?? [];
+    const journals = journalsResult.data ?? [];
+
+    const journalDates = new Set(journals.map((j) => j.entry_date));
     const counts = new Map<string, number>();
-    for (const e of entries ?? []) counts.set(e.entry_date, (counts.get(e.entry_date) ?? 0) + 1);
+    for (const e of entries) counts.set(e.entry_date, (counts.get(e.entry_date) ?? 0) + 1);
 
     const allDates = new Set([...counts.keys(), ...journalDates]);
     const list = [...allDates]
@@ -50,33 +69,73 @@ export default function DataPage() {
 
   const exportAll = async () => {
     setBusy(true);
+    setMsg(null);
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      if (userError) reportError(userError, { where: "data.export.auth" });
       setBusy(false); // otherwise the button stays stuck in its busy state forever
+      setMsg(
+        userError
+          ? "Couldn't reach the server, so no file was created. Check your connection and try again."
+          : "Your session has ended. Sign in again to export your data."
+      );
       return;
     }
+    const user = userData.user;
 
-    const [{ data: entries }, { data: journals }] = await Promise.all([
+    const [entriesResult, journalsResult] = await Promise.all([
       supabase
         .from("entries")
         .select(
           "entry_date, meal_type, mins_since_midnight, logged_at, felt_excessive, emotion, context_note, entry_items(qty, food_items(name, food_group, portion, unit, carbs, fat, protein, fibre, iron, calcium))"
         )
-        .eq("user_id", user.id),
-      supabase.from("journal_entries").select("entry_date, format, answers, saved_at").eq("user_id", user.id),
+        .eq("user_id", user.id)
+        // Ordered so the exported file is stable and diffable between runs,
+        // and so any cap the API applies takes a known slice rather than an
+        // arbitrary one.
+        .order("entry_date", { ascending: true }),
+      supabase
+        .from("journal_entries")
+        .select("entry_date, format, answers, saved_at")
+        .eq("user_id", user.id)
+        .order("entry_date", { ascending: true }),
     ]);
+
+    // The blob used to be written unconditionally, so a failed query
+    // downloaded {"entries": null, "journals": null} under a correct-looking
+    // filename. That is the worst available outcome for an export: the person
+    // believes they are holding their data. No data, no file.
+    if (entriesResult.error || journalsResult.error || !entriesResult.data || !journalsResult.data) {
+      reportSupabaseError(entriesResult.error ?? journalsResult.error, { where: "data.export" });
+      setBusy(false);
+      setMsg("Couldn't export your data, so no file was created. Check your connection and try again.");
+      return;
+    }
+
+    const entries = entriesResult.data;
+    const journals = journalsResult.data;
 
     const blob = new Blob([JSON.stringify({ entries, journals }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = `recovery-nutrition-export-${dayKey(new Date())}.json`;
+    // Safari, and iOS Safari especially, will not act on a click against an
+    // anchor that was never in the document — and revoking the object URL on
+    // the very next line can pull the blob away before the download starts.
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+
     setBusy(false);
+    // Stated counts so the file can be checked against this screen rather
+    // than trusted.
+    setMsg(
+      `Exported ${entries.length} eating occasion${entries.length === 1 ? "" : "s"} and ` +
+        `${journals.length} reflection${journals.length === 1 ? "" : "s"}.`
+    );
   };
 
   const doDelete = async () => {
@@ -141,8 +200,14 @@ export default function DataPage() {
       </section>
 
       <section className="rn-card">
-        <div className="rn-label">Saved days ({days ? days.length : "…"})</div>
-        {!days || days.length === 0 ? (
+        <div className="rn-label">Saved days ({loadError ? "—" : days ? days.length : "…"})</div>
+        {/* Four states, all distinguishable: failed, still loading, genuinely
+            empty, and loaded. They used to collapse into two. */}
+        {loadError ? (
+          <p className="rn-error" role="alert">{loadError}</p>
+        ) : !days ? (
+          <p className="rn-quiet" role="status" aria-live="polite">Counting your saved days…</p>
+        ) : days.length === 0 ? (
           <p className="rn-empty">Nothing saved yet.</p>
         ) : (
           <ul className="rn-facts">

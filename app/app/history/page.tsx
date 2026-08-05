@@ -55,7 +55,14 @@ export default function HistoryPage() {
     }
 
     const from = windowStart(windowDays);
-    let entryQuery = supabase.from("entries").select(ENTRY_SELECT).eq("user_id", user.id);
+    // Ordered so that "All time" is deterministic. Without it the row order is
+    // whatever Postgres returns, and any cap the API applies would silently
+    // keep an arbitrary subset rather than a known one.
+    let entryQuery = supabase
+      .from("entries")
+      .select(ENTRY_SELECT)
+      .eq("user_id", user.id)
+      .order("entry_date", { ascending: false });
     let journalQuery = supabase
       .from("journal_entries")
       .select("entry_date, format, answers, saved_at")
