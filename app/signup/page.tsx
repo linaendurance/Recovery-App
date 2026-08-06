@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FUNCTIONS_URL } from "@/lib/env";
+import AuthFooter from "@/components/AuthFooter";
 
 const FUNCTION_URL = `${FUNCTIONS_URL}/signup-with-invite`;
 
@@ -232,6 +233,7 @@ export default function SignupPage() {
         </form>
         <p className="rn-auth-footer">Already have an account? <Link href="/login">Sign in</Link></p>
       </div>
+      <AuthFooter />
     </main>
   );
 }

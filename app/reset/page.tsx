@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FUNCTIONS_URL } from "@/lib/env";
 import { reportError } from "@/lib/reportError";
+import AuthFooter from "@/components/AuthFooter";
 
 /**
  * Password reset, step 2.
@@ -109,6 +110,7 @@ export default function ResetPage() {
           <div className="rn-wordmark">Recovery Nutrition Tracker</div>
           <p className="rn-quiet">Checking your link…</p>
         </div>
+        <AuthFooter />
       </main>
     );
   }
@@ -127,6 +129,7 @@ export default function ResetPage() {
             <Link href="/forgot">Request a new link</Link>
           </p>
         </div>
+        <AuthFooter />
       </main>
     );
   }
@@ -155,6 +158,7 @@ export default function ResetPage() {
           </button>
         </form>
       </div>
+      <AuthFooter />
     </main>
   );
 }

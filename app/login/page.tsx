@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { reportError } from "@/lib/reportError";
+import AuthFooter from "@/components/AuthFooter";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -82,6 +83,7 @@ export default function LoginPage() {
         </p>
         <p className="rn-auth-footer">Have an invite code? <Link href="/signup">Create an account</Link></p>
       </div>
+      <AuthFooter />
     </main>
   );
 }

@@ -38,6 +38,14 @@ button,input{font:inherit}
 }
 .rn-input:focus{outline:none; border-color:var(--indigo); background:#fff}
 .rn-hint{font-size:12px; color:var(--ink-2); margin:2px 0 0}
+/* Legal and safety floor on the signed-out screens. Muted, but present on
+   every one of them — these are the pages a stranger sees first. */
+/* box-sizing + width:100% matter here: a bare max-width overflowed a 320px
+   viewport by 18px once the horizontal padding was added. */
+.rn-auth-legal{width:100%;max-width:420px;box-sizing:border-box;padding:0 18px;margin:18px auto 0;font-size:11.5px;line-height:1.55;color:var(--ink-2);text-align:center;overflow-wrap:anywhere}
+.rn-auth-legal p{margin:0 0 7px}
+.rn-auth-legal a{color:var(--ink-2);text-decoration:underline}
+.rn-auth-legal b{color:var(--ink)}
 /* The "what this is and isn't" panel above the sign-up form. Deliberately
    readable rather than fine print: it states the app's intended purpose, which
    is the thing a regulator, a lawyer and a worried user all look for first. */

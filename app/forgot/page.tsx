@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import AuthFooter from "@/components/AuthFooter";
 
 /**
  * Password reset, step 1.
@@ -73,6 +74,7 @@ export default function ForgotPage() {
           </>
         )}
       </div>
+      <AuthFooter />
     </main>
   );
 }
