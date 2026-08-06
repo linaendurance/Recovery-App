@@ -7,6 +7,12 @@ out/
 *.tsbuildinfo
 .DS_Store
 
+# Source archives written into the working directory by `@netlify/mcp` when it
+# deploys. They are a zip of the whole tree — several megabytes, regenerated on
+# every deploy, and left behind entirely when an upload fails partway. Never
+# source, and never something to commit.
+deploy-*.zip
+
 # Database dumps produced by scripts/backup.sh. These contain EVERY user's food
 # log and journal in plain text — the most sensitive files this project can
 # produce. Ignored so that a routine `git add -A` cannot publish them.
