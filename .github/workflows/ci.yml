@@ -7,9 +7,17 @@ on:
     branches: ["**"]
   pull_request:
 
+# A second push supersedes the first. Without this, every push queues a full
+# duplicate run against a free-tier minute budget.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # A hung job otherwise runs until GitHub's 6-hour default kills it.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -64,6 +72,12 @@ jobs:
           if [ -n "$dupes" ]; then echo "duplicate migration versions: $dupes"; exit 1; fi
           echo "migration versions unique: $(ls supabase/migrations | wc -l) files"
 
+      # Advisory visibility, deliberately NOT a gate: the open advisories are
+      # only fixed in Next 15/16, so failing on them would mean a permanently
+      # red pipeline that everyone learns to ignore.
+      - name: Dependency advisories (informational)
+        run: npm audit --audit-level=high || true
+
       # The restore path, proven rather than assumed: apply every migration to
       # an empty database and diff the result against the recorded schema.
       # Fails if a migration is missing from the repo, or if production was
@@ -80,6 +94,7 @@ jobs:
   # and obvious here within seconds.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -110,8 +125,17 @@ jobs:
           mkdir -p shots
           npm run e2e
 
+      # The screens rendering is not the same as the screens rendering
+      # CORRECTLY WHEN A QUERY FAILS. Both data-loss bugs found in this project
+      # were invisible to every other gate, including the run above.
+      - name: Failure paths (silent data loss)
+        run: npm run e2e:failures
+
       - name: Accessibility (WCAG 2.1 A + AA)
         run: npm run a11y
+
+      - name: Mobile overflow and tap targets
+        run: npm run audit:mobile
 
       - uses: actions/upload-artifact@v4
         if: always()

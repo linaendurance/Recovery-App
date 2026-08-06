@@ -1,0 +1,25 @@
+# Dependency updates. There was no automated visibility at all before this:
+# the five open advisories were found by running `npm audit` by hand, which is
+# not a process.
+#
+# Weekly rather than daily on purpose. This is a solo project, and a PR nobody
+# has time to read is the same as no PR — except noisier.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Next, React and their types move together. Separate PRs for each would
+      # each fail on their own, because the versions are coupled.
+      next-and-react:
+        patterns: ["next", "react", "react-dom", "@types/react", "@types/react-dom", "eslint-config-next"]
+      dev-tooling:
+        patterns: ["@types/node", "typescript", "eslint", "tsx", "playwright", "@axe-core/*", "axe-core", "wait-on"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
