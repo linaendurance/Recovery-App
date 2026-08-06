@@ -23,7 +23,7 @@ const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") ?? "";
 // Current version of the privacy notice. Bump together with VERSION in
 // app/privacy/page.tsx whenever the notice materially changes, so it stays
 // possible to tell who agreed to which text.
-const CONSENT_VERSION = "2026-08-01";
+const CONSENT_VERSION = "2026-08-05";
 
 // verify_jwt is off (it has to be — sign-up happens before there is a session),
 // so this endpoint is reachable by anyone. Previously it also sent

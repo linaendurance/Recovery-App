@@ -10,7 +10,7 @@ export const metadata = {
 // Bump this, and CONSENT_VERSION in the signup edge function, together whenever
 // the substance below changes. profiles.consent_version records which text a
 // person actually agreed to.
-const VERSION = "2026-08-01";
+const VERSION = "2026-08-05";
 
 // The named controller and the address data requests go to. GDPR Art 13(1)(a)
 // and (b) make both mandatory, and neither can be invented — they have to be a
@@ -109,9 +109,9 @@ export default function PrivacyPage() {
       <section className="rn-card">
         <div className="rn-label">Who is responsible for this data</div>
         <p className="rn-note">
-          The data controller is <b>{CONTROLLER}</b>, acting as an individual. That means one named
-          person is accountable for how your food log and journal are handled — not a company, and
-          not nobody.
+          The data controller is <b>{CONTROLLER}</b>, acting as an individual and resident in
+          Serbia. That means one named person is accountable for how your food log and journal are
+          handled — not a company, and not nobody.
         </p>
         <p className="rn-note">
           For anything about your data — a copy of it, a correction, deletion, a complaint, or a
@@ -119,9 +119,30 @@ export default function PrivacyPage() {
           <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a>. Messages are read by one
           person, so please allow a few days.
         </p>
+      </section>
+
+      <section className="rn-card">
+        <div className="rn-label">Which law applies, and where to complain</div>
+        <p className="rn-note">
+          The controller is in Serbia, so Serbia&apos;s <i>Law on Personal Data Protection</i>{" "}
+          applies. <b>It is not the only law that applies to you.</b> Because this app is offered to
+          people in the UK and the EEA, UK and EU data protection law applies to their data as well,
+          regardless of where the controller lives. Whichever gives you more protection is the one
+          that counts.
+        </p>
+        <p className="rn-note">
+          Your database is hosted in <b>Frankfurt, Germany</b>. Some parts of the app run on servers
+          in the <b>United States</b>, and the controller accesses the system from{" "}
+          <b>Serbia</b> — neither of which the EU treats as automatically equivalent to its own
+          protection. The practical effect is that your food log and journal are stored in the EU,
+          but the person responsible for them, and some of the infrastructure serving the app, are
+          outside it.
+        </p>
         <p className="rn-fine">
-          If you are in the UK or the EEA and you are not satisfied with how a request was handled,
-          you have the right to complain to your national data protection authority.
+          If you are unhappy with how a request was handled you can complain to a regulator. In the
+          EEA or the UK that is your own national data protection authority. In Serbia it is the
+          Commissioner for Information of Public Importance and Personal Data Protection. You can
+          complain to your own authority wherever you live.
         </p>
       </section>
 

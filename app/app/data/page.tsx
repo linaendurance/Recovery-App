@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { dayKey } from "@/lib/dates";
 import { reportError, reportSupabaseError } from "@/lib/reportError";
+import ChangePassword from "@/components/ChangePassword";
 
 type DaySummary = { date: string; meals: number; hasJournal: boolean };
 
@@ -238,6 +239,8 @@ export default function DataPage() {
         </div>
         {msg && <p className="rn-fine">{msg}</p>}
       </section>
+
+      <ChangePassword />
 
       <section className="rn-card">
         <div className="rn-label">Delete your account</div>

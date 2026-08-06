@@ -17,13 +17,9 @@ export const metadata = {
 // version each account accepted.
 const VERSION = "2026-08-05";
 
-// TODO — the one clause that still needs a decision: which country's law
-// governs these terms. It has been left as the operator's country of residence
-// rather than invented, because naming the wrong jurisdiction is worse than
-// naming none. Consumer protection in the reader's own country applies
-// regardless, which is what clause 13 says.
 const OPERATOR = "Lina Nikolovska";
 const CONTACT = "nikolovskalina4@gmail.com";
+const COUNTRY = "the Republic of Serbia";
 
 export default function TermsPage() {
   return (
@@ -46,9 +42,10 @@ export default function TermsPage() {
       <section className="rn-card">
         <div className="rn-label">1 · Who operates this app</div>
         <p className="rn-note">
-          Recovery Nutrition Tracker is operated by <b>{OPERATOR}</b>, acting as an individual and
-          not as a company. Contact for anything relating to these terms, your data, or a problem
-          with the app: <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a>.
+          Recovery Nutrition Tracker is operated by <b>{OPERATOR}</b>, resident in {COUNTRY},
+          acting as an individual and not as a company. Contact for anything relating to these
+          terms, your data, or a problem with the app:{" "}
+          <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a>.
         </p>
         <p className="rn-fine">
           The same address is the contact for data protection requests. There is no separate
@@ -135,13 +132,17 @@ export default function TermsPage() {
           account. Please use a password you do not use anywhere else. Passwords are checked against
           known breach lists at sign-up and rejected if they appear in one.
         </p>
+        <p className="rn-note">
+          You can <b>change</b> your password at any time from the Data tab, using your current one.
+          That works without email.
+        </p>
         <p className="rn-note rn-note--warn">
-          <b>Please write your password down somewhere safe.</b> Password reset by email is not
-          working at present, and the app currently has no other way to change or recover a
-          password. If you lose it, you will need to contact{" "}
-          <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a> — and until that is
-          fixed, being locked out is a real possibility. This is stated plainly here because you
-          should know it before you rely on the app, not after.
+          <b>But you cannot yet recover a forgotten password.</b> Reset by email is not working at
+          present, so if you forget your password entirely there is no self-service way back in —
+          you would need to contact{" "}
+          <a className="rn-link" href={`mailto:${CONTACT}`}>{CONTACT}</a>. Please keep your
+          password somewhere safe. This is stated plainly because you should know it before you
+          rely on the app, not after.
         </p>
       </section>
 
@@ -264,11 +265,22 @@ export default function TermsPage() {
       <section className="rn-card">
         <div className="rn-label">13 · Law, and your rights where you live</div>
         <p className="rn-note">
-          These terms are governed by the law of the country in which the operator is resident.
-          However, if you are a consumer in the United Kingdom, the European Economic Area or
-          another country with mandatory consumer protection, <b>you keep the benefit of the
-          consumer rights and the right to bring proceedings in the courts of the country where you
-          live</b>. Nothing here removes that.
+          These terms are governed by the law of <b>{COUNTRY}</b>, where the operator is resident,
+          and its courts have jurisdiction.
+        </p>
+        <p className="rn-note">
+          That does not take anything away from you. If you are a consumer in the United Kingdom,
+          the European Economic Area, or anywhere else with mandatory consumer protection,{" "}
+          <b>you keep the benefit of the consumer law of the country you live in, and the right to
+          bring proceedings in your own local courts</b>. Where that law conflicts with anything
+          written here, your local law wins.
+        </p>
+        <p className="rn-fine">
+          Data protection is separate from this clause and is not affected by it: because the app is
+          offered to people in the UK and the EEA, UK and EU data protection law applies to your
+          data regardless of where the operator lives. The{" "}
+          <Link className="rn-link" href="/privacy">privacy notice</Link> sets out what that means
+          and who to complain to.
         </p>
         <p className="rn-fine">
           If any part of these terms turns out to be unenforceable, the rest of them still apply.
