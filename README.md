@@ -162,6 +162,23 @@ select came back `null` — the exact shape that hung History permanently.
   insert a NEW row and set `deprecated_at`/`replaced_by` on the old one. There
   is an explicit escape hatch (`set local app.allow_food_value_change = 'on'`)
   for deliberate migrations.
+- **`profiles.birth_year` must stay un-writable by `authenticated`.** The age
+  gate in `app/app/layout.tsx` reads it, and a gate is only as strong as the
+  value it reads. Until 2026-08-06 `authenticated` held table-level UPDATE on
+  `profiles`, and a role-switched probe confirmed a user could set their own
+  `birth_year` from 2004 to 1990 — one `PATCH /rest/v1/profiles` defeated the
+  age check permanently. The same grant let them rewrite `consent_version`,
+  which made the consent record useless as evidence under GDPR Art 7(1).
+  `display_name` is the only column `authenticated` may update.
+  **Two traps if you ever revisit this:** table-level and column-level
+  privileges are independent in Postgres, so a table-level `GRANT UPDATE`
+  overrides any column-level `REVOKE` (the first migration did nothing for
+  exactly this reason); and `schema.fingerprint` does **not** cover grants, so
+  this invariant is invisible to the drift check. Grants were deliberately left
+  out of the fingerprint because Supabase's platform sets baseline privileges
+  the repo cannot reproduce, which made the rebuild permanently red. Verify
+  privileges with a role-switched probe instead — and assert the DATA changed,
+  not merely that the statement did not throw.
 - **The repo must be able to rebuild the schema.** `scripts/rebuild-test.sh`
   applies every migration to an empty database and diffs the result against
   `supabase/schema.fingerprint`. It runs in CI. If it reports `DRIFT`, either a
