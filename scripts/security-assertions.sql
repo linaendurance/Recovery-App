@@ -22,19 +22,53 @@ begin
     raise exception 'SECURITY: % table(s) in public have RLS disabled', n;
   end if;
 
-  -- 2. Privileged RPCs take a user id as a PARAMETER instead of from
-  --    auth.uid(), so a client able to call one could act as any user.
-  --    They must be service_role only.
-  for n in
-    select 1 from pg_proc p
-    where p.pronamespace = 'public'::regnamespace
-      and p.proname in ('increment_coach_usage','register_signup_attempt',
-                        'mark_signup_success','handle_new_user')
-      and (has_function_privilege('authenticated', p.oid, 'EXECUTE')
-        or has_function_privilege('anon', p.oid, 'EXECUTE'))
-  loop
-    raise exception 'SECURITY: a privileged RPC is executable by anon or authenticated';
-  end loop;
+  -- 2. SECURITY DEFINER functions run as the owner and bypass RLS, so any one
+  --    of them reachable by a client role is a potential way around the whole
+  --    boundary. Most here also take a user id as a PARAMETER rather than from
+  --    auth.uid(), which would let a caller act as any user.
+  --
+  --    This is an ALLOW-LIST on purpose. It was first written as a list of the
+  --    four known-dangerous names, which is a denylist: it says nothing about
+  --    the next SECURITY DEFINER function somebody adds, and that one is
+  --    exactly the one nobody will think to check. Inverting it means a new
+  --    definer function fails CI by default and has to be argued for here.
+  --
+  --    delete_my_account is the sole reviewed exception. It is safe because it
+  --    takes NO parameters and derives the subject from auth.uid(), so a caller
+  --    cannot name a victim — verified against the deployed definition.
+  select count(*) into n
+  from pg_proc p
+  where p.pronamespace = 'public'::regnamespace
+    and p.prosecdef
+    and p.proname <> 'delete_my_account'
+    and (has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      or has_function_privilege('anon', p.oid, 'EXECUTE'));
+  if n > 0 then
+    raise exception
+      'SECURITY: % SECURITY DEFINER function(s) outside the reviewed allow-list are callable by a client role', n;
+  end if;
+
+  -- 2b. Every SECURITY DEFINER function must pin search_path. Without it the
+  --     caller chooses how unqualified names resolve inside a function running
+  --     as the owner.
+  select count(*) into n
+  from pg_proc p
+  where p.pronamespace = 'public'::regnamespace and p.prosecdef
+    and (p.proconfig is null
+         or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'));
+  if n > 0 then
+    raise exception 'SECURITY: % SECURITY DEFINER function(s) do not pin search_path', n;
+  end if;
+
+  -- 2c. Pinning search_path to 'public' is only safe while no untrusted role
+  --     can create objects there. If that ever changes, a planted function or
+  --     table could shadow an unqualified reference inside a definer function.
+  --     Verified false for both client roles in production; asserted so it
+  --     stays that way.
+  if has_schema_privilege('authenticated', 'public', 'CREATE')
+     or has_schema_privilege('anon', 'public', 'CREATE') then
+    raise exception 'SECURITY: a client role can CREATE in schema public — search_path pinning is bypassable';
+  end if;
 
   -- 3. profiles.birth_year must not be writable by the role being age-gated.
   --    This was exploitable: a user could PATCH their own birth_year and walk
