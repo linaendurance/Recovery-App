@@ -14,6 +14,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # First job deliberately, and with no npm install: the static guardrails are
+  # pure grep/python and finish in seconds. A service-role key imported into
+  # client code should fail in ten seconds, not after a three-minute build.
+  #
+  # Check 2 (secrets in the compiled bundle) needs .next, which does not exist
+  # here — the script reports that honestly and the verify job re-runs it after
+  # the build, where the answer is knowable.
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static security guardrails
+        run: ./scripts/security-checks.sh
+
   verify:
     runs-on: ubuntu-latest
     # A hung job otherwise runs until GitHub's 6-hour default kills it.
@@ -53,6 +68,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
         run: npm run build
+
+      # Re-run now that .next exists. The static checks are cheap to repeat and
+      # this is the only moment the bundle scan can actually answer its
+      # question: does a service_role JWT ship to the browser?
+      - name: Secrets in build output
+        run: ./scripts/security-checks.sh
 
       # Every JSON file must parse strictly. tsconfig.json previously contained
       # comments, which TypeScript accepts and JSON.parse does not.

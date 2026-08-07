@@ -61,6 +61,12 @@ for f in $(ls "$HERE"/supabase/migrations/*.sql | sort); do
 done
 
 echo
+echo "Running security assertions against the rebuilt schema..."
+$PSQL -v ON_ERROR_STOP=1 -f "$HERE/scripts/security-assertions.sql" || {
+  echo "SECURITY ASSERTIONS FAILED — a migration has weakened an invariant." >&2
+  exit 1
+}
+
 echo "Comparing rebuilt schema against committed fingerprint..."
 $PSQL -A -F'|' -t -f "$HERE/scripts/schema-fingerprint.sql" > "$WORK/actual.txt"
 
