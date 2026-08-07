@@ -173,6 +173,32 @@ else
   pass "reportError scrubbing choke point intact (client + server)"
 fi
 
+# ---------------------------------------------------------------------------
+# 9. Invite codes must never be committed.
+#
+# THIS REPOSITORY IS PUBLIC. Sign-up is gated by nothing except an invite code,
+# so a code in a tracked file is an open registration form for anyone reading
+# GitHub. Codes are distributed out of band — a message to the person, never a
+# file.
+#
+# Two precise patterns rather than one broad one. A generic "CODE-CODE" shape
+# was tried and rejected: it fired on CVE-2025-29927, YOUR-PROJECT-REF and
+# ALLOW-LIST. A check that cries wolf gets ignored, and an ignored gate is
+# worse than no gate.
+# ---------------------------------------------------------------------------
+leaked=""
+if git grep -qIE "\bDEMO-[A-Z0-9]{4,}" -- . 2>/dev/null; then
+  leaked="$(git grep -nIE '\bDEMO-[A-Z0-9]{4,}' -- . | head -3)"
+fi
+if git grep -qIiE "insert +into +(public\.)?invite_codes" -- . 2>/dev/null; then
+  leaked="${leaked}"$'\n'"$(git grep -nIiE 'insert +into +(public\.)?invite_codes' -- . | head -3)"
+fi
+if [ -n "${leaked// /}" ]; then
+  fail "an invite code (or a migration seeding one) is committed to a PUBLIC repo" "$leaked"
+else
+  pass "no invite codes committed"
+fi
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "All security guardrails passed."
