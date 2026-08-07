@@ -173,17 +173,58 @@ select came back `null` — the exact shape that hung History permanently.
   **Two traps if you ever revisit this:** table-level and column-level
   privileges are independent in Postgres, so a table-level `GRANT UPDATE`
   overrides any column-level `REVOKE` (the first migration did nothing for
-  exactly this reason); and `schema.fingerprint` does **not** cover grants, so
-  this invariant is invisible to the drift check. Grants were deliberately left
-  out of the fingerprint because Supabase's platform sets baseline privileges
-  the repo cannot reproduce, which made the rebuild permanently red. Verify
-  privileges with a role-switched probe instead — and assert the DATA changed,
-  not merely that the statement did not throw.
+  exactly this reason); and `schema.fingerprint` does **not** cover grants.
+  Grants were deliberately left out of the fingerprint because Supabase's
+  platform sets baseline privileges the repo cannot reproduce, which made the
+  rebuild permanently red. This invariant is instead asserted directly, by
+  `scripts/security-assertions.sql` — including the reverse check that
+  `display_name` REMAINS writable, because over-revoking breaks the product
+  just as surely as under-revoking breaks the age gate. When verifying by hand,
+  use a role-switched probe and assert the DATA changed, not merely that the
+  statement did not throw: a filtered UPDATE succeeds silently against zero
+  rows.
+- **A `SECURITY DEFINER` function must not be callable by `anon` or
+  `authenticated`.** They run as the owner and bypass RLS, so one reachable
+  from a client is a way around the entire boundary — and most here take a user
+  id as a parameter rather than from `auth.uid()`, which would let a caller act
+  as any user. `delete_my_account` is the single reviewed exception: it takes
+  no parameters and derives the subject from `auth.uid()`, so a caller cannot
+  name a victim. The assertion is an allow-list, so adding a new definer
+  function fails CI until it is argued for there. Every one must also pin
+  `search_path`; they pin it to `public`, which is safe only because no client
+  role holds `CREATE` on that schema — also asserted, because if it ever
+  changed a planted object could shadow an unqualified reference.
 - **The repo must be able to rebuild the schema.** `scripts/rebuild-test.sh`
   applies every migration to an empty database and diffs the result against
   `supabase/schema.fingerprint`. It runs in CI. If it reports `DRIFT`, either a
   migration is missing from the repo or production was changed outside one —
   in both cases the restore path is broken until it is fixed.
+
+## What CI will stop you doing
+
+Three gates, deliberately split by what they can actually know:
+
+- `scripts/security-checks.sh` — static, runs first with no `npm install`, so a
+  service-role key imported into client code fails in seconds rather than after
+  a build. Runs a second time after the build, which is the only moment the
+  "is a service_role JWT in the bundle" question can be answered.
+- `scripts/security-assertions.sql` — run by `rebuild-test.sh` against the
+  database rebuilt from migrations. Privilege state cannot be grepped out of
+  migration text: migration HISTORY is not current STATE. `add_coach_usage_limit`
+  grants a privileged RPC to `authenticated` and a later migration revokes it,
+  so a static scan would cry wolf forever.
+- `scripts/check-edge-drift.sh` — proves the deployed Edge Functions are the
+  ones in this repo. **Currently SKIPS**: set `SUPABASE_ACCESS_TOKEN` and
+  `SUPABASE_PROJECT_REF` as repository secrets to arm it. Until then the origin
+  allow-list, the server-side age gate and password breach screening are
+  reviewed here but unverified there.
+
+Two things CI cannot do for you. It cannot stop someone deleting the gate — a
+check that has been removed cannot complain — so **enable branch protection on
+the default branch and mark `security` and `verify` as required status checks**;
+that is what actually prevents a merge. And a guardrail nobody has watched fail
+is not known to work: each of these was mutation-tested by reintroducing the
+bug it exists to catch, and anything added later deserves the same.
 
 ## Module boundaries worth preserving
 
