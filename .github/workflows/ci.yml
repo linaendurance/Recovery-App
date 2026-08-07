@@ -33,6 +33,21 @@ jobs:
     runs-on: ubuntu-latest
     # A hung job otherwise runs until GitHub's 6-hour default kills it.
     timeout-minutes: 15
+    # Job-level, not step-level. next.config.mjs THROWS when the Supabase URL is
+    # missing (it needs the origin to build the CSP), and every next-* command
+    # loads that config — not just `next build`. Setting it only on the build
+    # step left `next lint` dying before it evaluated a single rule, which read
+    # as a lint failure and turned the whole pipeline red.
+    #
+    # Configuration is mandatory (see README "Configuration"), so CI needs
+    # values. CI verifies that the code COMPILES, not that it can reach a real
+    # database — so it falls back to a placeholder rather than requiring
+    # repository variables to be configured before CI can pass. Set the real
+    # values as Actions variables only if you want CI to build against the true
+    # project ref.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,16 +72,8 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # Env comes from the job level — see the note there.
       - name: Production build
-        # Configuration is mandatory (see README "Configuration"), so the build
-        # needs values. CI verifies that the code COMPILES, not that it can
-        # reach a real database — so it falls back to a placeholder rather than
-        # requiring repository variables to be configured before CI can pass.
-        # Set the real values as Actions variables only if you want CI to build
-        # against the true project ref.
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
         run: npm run build
 
       # Re-run now that .next exists. The static checks are cheap to repeat and
