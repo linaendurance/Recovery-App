@@ -29,6 +29,16 @@ jobs:
       - name: Static security guardrails
         run: ./scripts/security-checks.sh
 
+      # The repo is only the source of truth for the Edge Functions if what is
+      # deployed IS the repo. Skips cleanly until the two secrets are set — see
+      # the script header. Add SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF
+      # as repository secrets to turn this into a real gate.
+      - name: Deployed edge functions match the repo
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: ./scripts/check-edge-drift.sh
+
   verify:
     runs-on: ubuntu-latest
     # A hung job otherwise runs until GitHub's 6-hour default kills it.
